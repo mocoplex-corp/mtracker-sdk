@@ -15,6 +15,12 @@ public final class MTNativeAdView: UIView {
     private var ad: NativeAd?
     private var impressionFired = false
 
+    /// Fired once when the viewability-gated impression beacon fires (main thread).
+    public var onImpression: (() -> Void)?
+
+    /// Fired when the ad is tapped, alongside click routing to the store (main thread).
+    public var onClick: (() -> Void)?
+
     /// Viewability tracking: the ad must be ≥ `pixels` fraction on-screen continuously
     /// for `ms` before the impression counts (docs/ads.md §4, §6).
     private var viewabilityTimer: Timer?
@@ -175,6 +181,7 @@ public final class MTNativeAdView: UIView {
         for urlString in ad.tracking.impressionURLs {
             fireBeacon(urlString, method: "POST")
         }
+        onImpression?()
     }
 
     /// Fraction of this view's area currently visible within its window.
@@ -190,6 +197,7 @@ public final class MTNativeAdView: UIView {
 
     @objc private func handleTap() {
         guard let ad else { return }
+        onClick?()
         // GET the click beacon (clickd 302-redirects; joins attribution pipeline).
         guard let url = URL(string: ad.tracking.clickURL) else { return }
         fireBeacon(ad.tracking.clickURL, method: "GET")

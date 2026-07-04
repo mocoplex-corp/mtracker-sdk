@@ -2,9 +2,9 @@ import Foundation
 
 /// Transport for the App Ops surface (docs/appops-contract §2, §3).
 ///
-/// Two endpoints on the ingest host family:
-///   - GET  {ingestBaseURL}/v1/appops        — delivery (config/messages/update). PUBLIC, no HMAC.
-///   - POST {ingestBaseURL}/v1/push/register — push token registration. HMAC-signed exactly
+/// Two endpoints served by the api service (config.appOpsBaseURL), NOT the ingest host:
+///   - GET  {appOpsBaseURL}/v1/appops        — delivery (config/messages/update). PUBLIC, no HMAC.
+///   - POST {appOpsBaseURL}/v1/push/register — push token registration. HMAC-signed exactly
 ///     like events, reusing `HTTPClient.sign` (the shared signer).
 final class AppOpsClient: @unchecked Sendable {
     private let config: Ja0TrackerConfig
@@ -33,7 +33,7 @@ final class AppOpsClient: @unchecked Sendable {
         sessionSec: Int64,
         sessionCount: Int64
     ) async -> [String: Any]? {
-        var comps = URLComponents(string: config.ingestBaseURL + Self.appOpsPath)
+        var comps = URLComponents(string: config.appOpsBaseURL + Self.appOpsPath)
         comps?.queryItems = [
             URLQueryItem(name: "app_id", value: config.appId),
             URLQueryItem(name: "platform", value: platform),
@@ -70,7 +70,7 @@ final class AppOpsClient: @unchecked Sendable {
         token: String,
         lang: String
     ) async -> Bool {
-        guard let url = URL(string: config.ingestBaseURL + Self.pushRegisterPath) else { return false }
+        guard let url = URL(string: config.appOpsBaseURL + Self.pushRegisterPath) else { return false }
 
         // Ordered payload; the exact bytes are both signed and sent.
         let payload: [String: Any] = [

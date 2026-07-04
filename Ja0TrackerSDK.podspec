@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'Ja0TrackerSDK'
-  s.version          = '1.0.0'
+  s.version          = '1.0.1'
   s.summary          = 'ja0 SDK (mtracker) — iOS attribution, sessions, deep links, native ads.'
   s.description      = <<-DESC
     Native iOS Core for mtracker: SKAdNetwork 4 + AdAttributionKit attribution,

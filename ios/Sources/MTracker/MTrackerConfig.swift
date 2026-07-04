@@ -36,13 +36,19 @@ public struct Ja0TrackerConfig: Sendable {
     public let ingestBaseURL: String
     /// clickd / deep link + ad-click resolution base URL.
     public let clickdBaseURL: String
-    /// Native ad request base URL (adserver public host). Defaults to clickd host until
-    /// the adserver is publicly exposed (docs/sdk-contract §1).
+    /// Native ad request base URL (adserver public host): POST {adBaseURL}/v1/ad.
     public let adBaseURL: String
+
+    /// App Ops base URL. Remote config, in-app messages, update popups, and push token
+    /// registration are served by the api service, NOT the ingest host:
+    ///   GET  {appOpsBaseURL}/v1/appops
+    ///   POST {appOpsBaseURL}/v1/push/register
+    public let appOpsBaseURL: String
 
     public static let defaultIngestBaseURL = "https://ingest-mtracker.ja0.com"
     public static let defaultClickdBaseURL = "https://go-mtracker.ja0.com"
-    public static let defaultAdBaseURL = "https://go-mtracker.ja0.com"
+    public static let defaultAdBaseURL = "https://ad-mtracker.ja0.com"
+    public static let defaultAppOpsBaseURL = "https://api-mtracker.ja0.com"
 
     public init(
         sdkKey: String,
@@ -52,7 +58,8 @@ public struct Ja0TrackerConfig: Sendable {
         waitForConsent: Bool = true,
         ingestBaseURL: String = Ja0TrackerConfig.defaultIngestBaseURL,
         clickdBaseURL: String = Ja0TrackerConfig.defaultClickdBaseURL,
-        adBaseURL: String = Ja0TrackerConfig.defaultAdBaseURL
+        adBaseURL: String = Ja0TrackerConfig.defaultAdBaseURL,
+        appOpsBaseURL: String = Ja0TrackerConfig.defaultAppOpsBaseURL
     ) {
         self.sdkKey = sdkKey
         self.sdkSecret = sdkSecret
@@ -62,5 +69,6 @@ public struct Ja0TrackerConfig: Sendable {
         self.ingestBaseURL = ingestBaseURL
         self.clickdBaseURL = clickdBaseURL
         self.adBaseURL = adBaseURL
+        self.appOpsBaseURL = appOpsBaseURL
     }
 }

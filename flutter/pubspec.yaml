@@ -2,7 +2,7 @@ name: ja0tracker
 description: >-
   mtracker Flutter SDK — mobile attribution, in-app events, deferred deep links, and
   native ad slots. Thin Pigeon/PlatformView wrapper over the native iOS/Android cores.
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/mocoplex/mtracker
 publish_to: none # TODO(release): publish to pub.dev once the native bridges are done.
 

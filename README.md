@@ -6,7 +6,7 @@
 - **무인증 공개 배포** — 별도 토큰/계정 없이 아래 좌표로 바로 받습니다.
 - 담긴 것: **Android AAR**(정적 Maven), **React Native 패키지**(tarball), **Flutter 플러그인**,
   **iOS**(Swift Package / CocoaPods 소스).
-- 현재 버전 **v1.0.0** (네 플랫폼 lockstep).
+- 현재 버전 **v1.0.1** (React Native만 v1.0.0 유지) (네 플랫폼 lockstep).
 
 키 발급: `sdkKey`/`sdkSecret`/`appId`는 콘솔 <https://admin.ja0.com/> 에서 발급하거나
 <help-myshop@mocoplex.com> 로 문의하세요.
@@ -19,12 +19,12 @@
 
 ```kotlin
 // settings.gradle.kts — dependencyResolutionManagement { repositories { … } }
-maven { url = uri("https://raw.githubusercontent.com/mocoplex-corp/mtracker-sdk/v1.0.0/maven") }
+maven { url = uri("https://raw.githubusercontent.com/mocoplex-corp/mtracker-sdk/v1.0.1/maven") }
 google(); mavenCentral()   // 전이 의존성(androidx, play-review 등) 해석용
 
 // app/build.gradle.kts
 dependencies {
-    implementation("io.ja0tracker:ja0tracker-android:1.0.0")
+    implementation("io.ja0tracker:ja0tracker-android:1.0.1")
 }
 ```
 
@@ -46,7 +46,7 @@ import { Ja0Tracker } from '@mocoplex-corp/ja0tracker-react-native';
 Ja0Tracker.initialize({ sdkKey: 'pk_...', sdkSecret: 'sk_...', appId: 'YOUR_APP_ID' });
 ```
 
-- Android 브리지는 Core AAR(`io.ja0tracker:ja0tracker-android:1.0.0`)에 의존 → 위 **Android Maven
+- Android 브리지는 Core AAR(`io.ja0tracker:ja0tracker-android:1.0.1`)에 의존 → 위 **Android Maven
   저장소도 함께 등록**하세요.
 - New Architecture(TurboModule/Fabric) 및 레거시 브리지 모두 지원.
 
@@ -62,7 +62,7 @@ dependencies:
   ja0tracker:
     git:
       url: https://github.com/mocoplex-corp/mtracker-sdk.git
-      ref: v1.0.0
+      ref: v1.0.1
       path: flutter
 ```
 
@@ -84,7 +84,7 @@ iOS SDK 소스가 이 저장소 `ios/` 에 담겨 있고, 루트 `Package.swift`
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/mocoplex-corp/mtracker-sdk.git", from: "1.0.0")
+    .package(url: "https://github.com/mocoplex-corp/mtracker-sdk.git", from: "1.0.1")
 ]
 ```
 
@@ -94,7 +94,7 @@ Xcode: **File ▸ Add Package Dependencies…** 에 위 URL을 넣고 `Ja0Tracke
 
 ```ruby
 # Podfile
-pod 'Ja0TrackerSDK', :git => 'https://github.com/mocoplex-corp/mtracker-sdk.git', :tag => 'v1.0.0'
+pod 'Ja0TrackerSDK', :git => 'https://github.com/mocoplex-corp/mtracker-sdk.git', :tag => 'v1.0.1'
 ```
 
 ```swift
@@ -108,15 +108,15 @@ Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_.
 
 ---
 
-## 좌표 요약 (v1.0.0)
+## 좌표 요약 (v1.0.1)
 
 | 플랫폼 | 방식 | 좌표 |
 |---|---|---|
-| Android | 정적 Maven (raw) | `io.ja0tracker:ja0tracker-android:1.0.0` |
+| Android | 정적 Maven (raw) | `io.ja0tracker:ja0tracker-android:1.0.1` |
 | React Native | tarball (raw) | `react-native/mocoplex-corp-ja0tracker-react-native-1.0.0.tgz` |
-| Flutter | git ref + path | `ref: v1.0.0`, `path: flutter` |
-| iOS | SPM (repo 루트 Package.swift) | `.package(url: …/mtracker-sdk.git, from: "1.0.0")` |
-| iOS | CocoaPods (소스 pod) | `pod 'Ja0TrackerSDK', :git => …, :tag => 'v1.0.0'` |
+| Flutter | git ref + path | `ref: v1.0.1`, `path: flutter` |
+| iOS | SPM (repo 루트 Package.swift) | `.package(url: …/mtracker-sdk.git, from: "1.0.1")` |
+| iOS | CocoaPods (소스 pod) | `pod 'Ja0TrackerSDK', :git => …, :tag => 'v1.0.1'` |
 
 이 저장소의 아티팩트는 내부 모노레포에서 빌드되어 배포됩니다(빌드/릴리스 절차는 내부
 `docs/sdk-github-release.md`). 버그/문의: <help-myshop@mocoplex.com>.

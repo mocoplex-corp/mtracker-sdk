@@ -52,9 +52,9 @@ android {
 
 dependencies {
     // The shared native Core. DELEGATE, never duplicate Core logic.
-    //   implementation 'io.ja0tracker:ja0tracker-android:1.0.0'
+    //   implementation 'io.ja0tracker:ja0tracker-android:1.0.1'
     // In the monorepo you may substitute this with `includeBuild("sdk/android")`.
-    implementation 'io.ja0tracker:ja0tracker-android:1.0.0'
+    implementation 'io.ja0tracker:ja0tracker-android:1.0.1'
 
     // Coroutines: Ja0Tracker.ads.load(slotId) is a `suspend fun`; the plugin bridges it to
     // the async Pigeon callback.
