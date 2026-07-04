@@ -139,9 +139,10 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
         callbacksWired = true
         Ja0Tracker.onAttribution { data -> flutterApi?.onAttribution(data.toMessage()) {} }
         Ja0Tracker.onDeepLink { link -> flutterApi?.onDeepLink(link.toMessage()) {} }
-        // App Ops: forward update/message to Dart. The Core hands a `markShown` completion for
-        // messages; call it right after emitting (delivery == shown, from Flutter's POV).
-        Ja0Tracker.onUpdateAvailable { update -> flutterApi?.onUpdateAvailable(update.toMessage()) {} }
+        // App update: leave the Core's onUpdateAvailable unset so the SDK draws the
+        // native update dialog itself (no host-app code needed).
+        // Messages (incl. review) are forwarded to Dart: review triggers the native
+        // in-app review; other messages reach the host onMessage handler.
         Ja0Tracker.onMessage { msg, markShown ->
             flutterApi?.onMessage(msg.toMessage()) {}
             markShown()

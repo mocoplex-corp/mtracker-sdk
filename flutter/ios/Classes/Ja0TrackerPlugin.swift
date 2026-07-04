@@ -107,11 +107,9 @@ public class Ja0TrackerPlugin: NSObject, FlutterPlugin, Ja0TrackerHostApi {
         Ja0Tracker.shared.onDeepLink { [weak self] link in
             self?.flutterApi?.onDeepLink(data: Self.message(from: link)) { _ in }
         }
-        // App Ops: forward update/message to Dart. The Core hands a `markShown` completion for
-        // messages; call it right after emitting (delivery == shown, from Flutter's POV).
-        Ja0Tracker.shared.onUpdateAvailable { [weak self] update in
-            self?.flutterApi?.onUpdateAvailable(data: Self.message(from: update)) { _ in }
-        }
+        // App update: leave the Core's onUpdateAvailable unset so the SDK draws the
+        // native update alert itself (no host-app code needed). Messages (incl.
+        // review) are still forwarded to Dart.
         Ja0Tracker.shared.onMessage { [weak self] msg, markShown in
             self?.flutterApi?.onMessage(data: Self.message(from: msg)) { _ in }
             markShown()
