@@ -51,7 +51,10 @@ private class MTNativeAdPlatformView(
     init {
         if (!slotId.isNullOrEmpty()) {
             scope.launch {
-                val ad = Ja0Tracker.ads.load(slotId)
+                val ad = Ja0Tracker.ads.load(
+                    slotId,
+                    context = mapOf("lang" to java.util.Locale.getDefault().language),
+                )
                 if (ad != null) {
                     // Core beacons fire regardless; forward the events to Dart (main thread).
                     adView.onImpression = { channel.invokeMethod("onAdImpression", mapOf("adId" to ad.adId)) }

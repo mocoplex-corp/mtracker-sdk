@@ -105,7 +105,12 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
     override fun loadAd(slotId: String, callback: (Result<NativeAdMessage?>) -> Unit) {
         scope.launch {
             try {
-                val ad = Ja0Tracker.ads.load(slotId)
+                // Pass the device language so the adserver serves localized (house-ad)
+                // copy — the prebuilt core forwards context.lang to the request.
+                val ad = Ja0Tracker.ads.load(
+                    slotId,
+                    context = mapOf("lang" to java.util.Locale.getDefault().language),
+                )
                 callback(Result.success(ad?.toMessage()))
             } catch (t: Throwable) {
                 callback(Result.success(null)) // no-fill on error
