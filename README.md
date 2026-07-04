@@ -4,8 +4,8 @@
 측정과 네이티브 광고 지면을 제공합니다. 연동 가이드/기능 설명: <https://mtracker.ja0.com/sdk>.
 
 - **무인증 공개 배포** — 별도 토큰/계정 없이 아래 좌표로 바로 받습니다.
-- 담긴 것: **Android AAR**(정적 Maven), **React Native 패키지**(tarball), **Flutter 플러그인**.
-- **iOS 제외** — CocoaPods/XCFramework는 macOS 빌드가 필요해 이 저장소에 포함하지 않습니다.
+- 담긴 것: **Android AAR**(정적 Maven), **React Native 패키지**(tarball), **Flutter 플러그인**,
+  **iOS**(Swift Package / CocoaPods 소스).
 - 현재 버전 **v1.0.0** (네 플랫폼 lockstep).
 
 키 발급: `sdkKey`/`sdkSecret`/`appId`는 콘솔 <https://admin.ja0.com/> 에서 발급하거나
@@ -74,11 +74,37 @@ await MTracker.initialize(MTrackerConfig(sdkKey: 'pk_...', sdkSecret: 'sk_...', 
 
 ---
 
-## iOS (이 저장소에서 제외)
+## iOS — Swift Package / CocoaPods (소스)
 
-iOS SDK(및 RN/Flutter의 iOS 네이티브)는 **macOS + Xcode**에서만 빌드됩니다. 이 무인증 공개
-경로에는 포함하지 않으며, macOS 환경에서 Swift Package/CocoaPods로 별도 배포합니다. 필요 시
-<help-myshop@mocoplex.com> 로 문의하세요.
+iOS SDK 소스가 이 저장소 `ios/` 에 담겨 있고, 루트 `Package.swift` 로 SPM 좌표를 노출합니다.
+바이너리(XCFramework)가 아니라 **소스**로 배포되므로 앱 빌드 시 함께 컴파일됩니다(무인증).
+
+### Swift Package Manager
+
+```swift
+// Package.swift
+dependencies: [
+    .package(url: "https://github.com/mocoplex-corp/mtracker-sdk.git", from: "1.0.0")
+]
+```
+
+Xcode: **File ▸ Add Package Dependencies…** 에 위 URL을 넣고 `MTracker` 라이브러리를 추가합니다.
+
+### CocoaPods (소스 pod)
+
+```ruby
+# Podfile
+pod 'MTracker', :git => 'https://github.com/mocoplex-corp/mtracker-sdk.git', :tag => 'v1.0.0'
+```
+
+```swift
+import MTracker
+MTracker.shared.initialize(MTrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_...", appId: "YOUR_APP_ID"))
+```
+
+- **iOS 15+.** `NSUserTrackingUsageDescription`(ATT 문구)와 `SKAdNetworkItems` 를 호스트 앱
+  `Info.plist` 에 추가해야 합니다. 개인정보 매니페스트(`PrivacyInfo.xcprivacy`)는 패키지에 동봉됩니다.
+- RN/Flutter 의 iOS 네이티브도 이 Core 에 의존합니다.
 
 ---
 
@@ -89,6 +115,8 @@ iOS SDK(및 RN/Flutter의 iOS 네이티브)는 **macOS + Xcode**에서만 빌드
 | Android | 정적 Maven (raw) | `io.mtracker:mtracker-android:1.0.0` |
 | React Native | tarball (raw) | `react-native/mocoplex-corp-mtracker-react-native-1.0.0.tgz` |
 | Flutter | git ref + path | `ref: v1.0.0`, `path: flutter` |
+| iOS | SPM (repo 루트 Package.swift) | `.package(url: …/mtracker-sdk.git, from: "1.0.0")` |
+| iOS | CocoaPods (소스 pod) | `pod 'MTracker', :git => …, :tag => 'v1.0.0'` |
 
 이 저장소의 아티팩트는 내부 모노레포에서 빌드되어 배포됩니다(빌드/릴리스 절차는 내부
 `docs/sdk-github-release.md`). 버그/문의: <help-myshop@mocoplex.com>.

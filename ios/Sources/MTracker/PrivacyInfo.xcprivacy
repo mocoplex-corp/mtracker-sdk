@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  mtracker iOS SDK — Privacy Manifest (REQUIRED, docs/sdk.md §4, §6).
+
+  Declares collected data types + their purposes, and the required-reason APIs the SDK
+  uses. Missing/incorrect entries cause App Store review rejection.
+
+  NOTE: These are realistic entries for an attribution SDK. Review + trim to match the
+  final shipped implementation before release. Coarse location is derived server-side
+  from IP (not collected on-device), so it is intentionally NOT declared here.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- The SDK performs cross-app tracking (attribution: clipboard match_token,
+         device fingerprint, ad measurement) ONLY when ATT is authorized. -->
+    <key>NSPrivacyTracking</key>
+    <true/>
+
+    <!-- IMPORTANT: NSPrivacyTrackingDomains is intentionally EMPTY.
+         Apple blocks connections to any listed domain until ATT is authorized, and it
+         is domain-level (all-or-nothing). Our ingest/clickd hosts also carry
+         first-party, privacy-first analytics (install, session_start, custom events)
+         that MUST flow without ATT (docs/sdk-contract §4, docs/attribution.md §2.1 —
+         SKAN/aggregate + aggregate analytics are ATT-independent). Listing them would
+         break core, compliant functionality. Tracking-specific fields (match_token,
+         device_fp) are only attached AFTER ATT authorization, in code (see MTracker /
+         Pasteboard / Fingerprint), which is the correct enforcement point. -->
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+        <!-- Device ID (IDFA/IDFV / match token) — attribution, only when ATT authorized. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeDeviceID</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+            </array>
+        </dict>
+
+        <!-- Product interaction — in-app events for retention/funnel/conversion. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeProductInteraction</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+
+        <!-- Advertising data — native ad requests / impression + click tracking. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeAdvertisingData</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+            </array>
+        </dict>
+
+        <!-- Device model / OS / screen — probabilistic fingerprint (ATT-gated). -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeOtherDiagnosticData</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+    </array>
+
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <!-- UserDefaults: the SDK reads/writes a first-launch installed flag in
+             `UserDefaults.standard` (Identity.swift) to distinguish a fresh install
+             from a delete->reinstall. Reason CA92.1 = access info stored solely for the
+             current app. (Keychain, SecRandomCopyBytes, and atomic file writes used by
+             the SDK are NOT required-reason APIs, so they need no declaration.) -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
