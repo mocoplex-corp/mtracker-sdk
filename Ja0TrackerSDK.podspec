@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name             = 'MTracker'
+  s.name             = 'Ja0TrackerSDK'
   s.version          = '1.0.0'
   s.summary          = 'ja0 SDK (mtracker) — iOS attribution, sessions, deep links, native ads.'
   s.description      = <<-DESC
@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
   s.swift_version    = '5.9'
 
   s.source_files     = 'ios/Sources/MTracker/**/*.swift'
-  s.resource_bundles = { 'MTracker' => ['ios/Sources/MTracker/PrivacyInfo.xcprivacy'] }
+  s.resource_bundles = { 'Ja0TrackerSDK' => ['ios/Sources/MTracker/PrivacyInfo.xcprivacy'] }
 
   s.frameworks       = 'Foundation', 'UIKit', 'Security', 'StoreKit', 'AppTrackingTransparency', 'AdSupport', 'CryptoKit'
   # AdAttributionKit is iOS 17.4+ — weak-link so the pod stays iOS 15 compatible.

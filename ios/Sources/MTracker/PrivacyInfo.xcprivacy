@@ -24,7 +24,7 @@
          that MUST flow without ATT (docs/sdk-contract §4, docs/attribution.md §2.1 —
          SKAN/aggregate + aggregate analytics are ATT-independent). Listing them would
          break core, compliant functionality. Tracking-specific fields (match_token,
-         device_fp) are only attached AFTER ATT authorization, in code (see MTracker /
+         device_fp) are only attached AFTER ATT authorization, in code (see Ja0Tracker /
          Pasteboard / Fingerprint), which is the correct enforcement point. -->
     <key>NSPrivacyTrackingDomains</key>
     <array/>

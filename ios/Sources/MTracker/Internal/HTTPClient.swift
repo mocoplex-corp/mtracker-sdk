@@ -29,13 +29,13 @@ enum PostResult {
 /// transmitted — so the body is encoded once and both signed and sent as-is. Any
 /// divergence (re-encoding, key ordering change, whitespace) yields a 401.
 final class HTTPClient: @unchecked Sendable {
-    private let config: MTrackerConfig
+    private let config: Ja0TrackerConfig
     private let session: URLSession
     private let logger: MTLogger
 
     static let eventsPath = "/v1/events"
 
-    init(config: MTrackerConfig, logger: MTLogger) {
+    init(config: Ja0TrackerConfig, logger: MTLogger) {
         self.config = config
         self.logger = logger
 
@@ -48,7 +48,7 @@ final class HTTPClient: @unchecked Sendable {
     }
 
     private static let userAgent: String = {
-        "mtracker-ios/\(MTracker.sdkVersion)"
+        "mtracker-ios/\(Ja0Tracker.sdkVersion)"
     }()
 
     /// Sends a batch of events. Returns a `PostResult` classifying the response.

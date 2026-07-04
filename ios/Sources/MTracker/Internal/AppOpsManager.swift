@@ -13,7 +13,7 @@ import UIKit
 /// thread via `AppOpsUI`.
 final class AppOpsManager: @unchecked Sendable {
 
-    private let config: MTrackerConfig
+    private let config: Ja0TrackerConfig
     private let logger: MTLogger
     private let client: AppOpsClient
     private let defaults: UserDefaults
@@ -40,7 +40,7 @@ final class AppOpsManager: @unchecked Sendable {
     private var pollTimer: DispatchSourceTimer?
 
     init(
-        config: MTrackerConfig,
+        config: Ja0TrackerConfig,
         logger: MTLogger,
         sessionSec: @escaping () -> Int64,
         sessionCount: @escaping () -> Int64,

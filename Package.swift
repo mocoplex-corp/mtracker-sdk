@@ -13,22 +13,25 @@
 import PackageDescription
 
 let package = Package(
-    name: "MTracker",
+    name: "Ja0TrackerSDK",
     platforms: [
         .iOS(.v15),
     ],
     products: [
         .library(
-            name: "MTracker",
-            targets: ["MTracker"]
+            name: "Ja0TrackerSDK",
+            targets: ["Ja0TrackerSDK"]
         ),
     ],
     dependencies: [
         // No third-party deps in the Core — Apple frameworks only.
     ],
     targets: [
+        // Module `Ja0TrackerSDK` ≠ public entry class `Ja0Tracker`, so a binary
+        // XCFramework's .swiftinterface has no module/type name collision.
+        // Source dir stays ios/Sources/MTracker.
         .target(
-            name: "MTracker",
+            name: "Ja0TrackerSDK",
             path: "ios/Sources/MTracker",
             resources: [
                 // Privacy manifest is REQUIRED for App Store review.
@@ -37,7 +40,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MTrackerTests",
-            dependencies: ["MTracker"],
+            dependencies: ["Ja0TrackerSDK"],
             path: "ios/Tests/MTrackerTests"
         ),
     ]

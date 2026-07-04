@@ -5,14 +5,14 @@ public enum LogLevel: String, Sendable {
     case none, error, warn, info, debug
 }
 
-/// Initialization config. Mirrors `MTracker.initialize({...})` in docs/sdk-contract §5.
+/// Initialization config. Mirrors `Ja0Tracker.initialize({...})` in docs/sdk-contract §5.
 ///
 /// `sdkKey` (public key) and `sdkSecret` (hmac secret) are both issued together when a
 /// tenant creates an SDK key in the dashboard (`/dashboard/mtracker/apps`); the secret
 /// is shown once. Both are injected here and used to sign every event request
 /// (docs/sdk-contract §2). Embedding the secret in a client has known limits — this is
 /// documented and can later be hardened with a challenge scheme (contract note §2).
-public struct MTrackerConfig: Sendable {
+public struct Ja0TrackerConfig: Sendable {
     /// Public tenant SDK key (contract `public_key`, e.g. `pk_ja0_demo`). Sent as
     /// `X-MT-Key` and in the batch `sdk_key` field. Required.
     public let sdkKey: String
@@ -50,9 +50,9 @@ public struct MTrackerConfig: Sendable {
         appId: String,
         logLevel: LogLevel = .info,
         waitForConsent: Bool = true,
-        ingestBaseURL: String = MTrackerConfig.defaultIngestBaseURL,
-        clickdBaseURL: String = MTrackerConfig.defaultClickdBaseURL,
-        adBaseURL: String = MTrackerConfig.defaultAdBaseURL
+        ingestBaseURL: String = Ja0TrackerConfig.defaultIngestBaseURL,
+        clickdBaseURL: String = Ja0TrackerConfig.defaultClickdBaseURL,
+        adBaseURL: String = Ja0TrackerConfig.defaultAdBaseURL
     ) {
         self.sdkKey = sdkKey
         self.sdkSecret = sdkSecret

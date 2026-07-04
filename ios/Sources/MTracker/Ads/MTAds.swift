@@ -1,22 +1,22 @@
 import Foundation
 
-/// Ads accessor, reached via `MTracker.shared.ads` (docs/sdk-contract §5, docs/ads.md).
+/// Ads accessor, reached via `Ja0Tracker.shared.ads` (docs/sdk-contract §5, docs/ads.md).
 /// Requests a native ad by slot ID; the adserver decides which ad fills the slot and
 /// returns native assets + tracking URLs (docs/ads.md §6).
 public final class MTAds {
-    private let config: MTrackerConfig
+    private let config: Ja0TrackerConfig
     private let logger: MTLogger
     private let session: URLSession
 
     /// Native ad request path on the ad base host (docs/sdk-contract §1: POST /v1/ad).
     private static let adPath = "/v1/ad"
 
-    init(config: MTrackerConfig, logger: MTLogger) {
+    init(config: Ja0TrackerConfig, logger: MTLogger) {
         self.config = config
         self.logger = logger
         let sc = URLSessionConfiguration.default
         sc.timeoutIntervalForRequest = 10
-        sc.httpAdditionalHeaders = ["User-Agent": "mtracker-ios/\(MTracker.sdkVersion)"]
+        sc.httpAdditionalHeaders = ["User-Agent": "mtracker-ios/\(Ja0Tracker.sdkVersion)"]
         self.session = URLSession(configuration: sc)
     }
 

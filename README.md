@@ -88,18 +88,18 @@ dependencies: [
 ]
 ```
 
-Xcode: **File ▸ Add Package Dependencies…** 에 위 URL을 넣고 `MTracker` 라이브러리를 추가합니다.
+Xcode: **File ▸ Add Package Dependencies…** 에 위 URL을 넣고 `Ja0TrackerSDK` 라이브러리를 추가합니다.
 
 ### CocoaPods (소스 pod)
 
 ```ruby
 # Podfile
-pod 'MTracker', :git => 'https://github.com/mocoplex-corp/mtracker-sdk.git', :tag => 'v1.0.0'
+pod 'Ja0TrackerSDK', :git => 'https://github.com/mocoplex-corp/mtracker-sdk.git', :tag => 'v1.0.0'
 ```
 
 ```swift
-import MTracker
-MTracker.shared.initialize(MTrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_...", appId: "YOUR_APP_ID"))
+import Ja0TrackerSDK
+Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_...", appId: "YOUR_APP_ID"))
 ```
 
 - **iOS 15+.** `NSUserTrackingUsageDescription`(ATT 문구)와 `SKAdNetworkItems` 를 호스트 앱
@@ -116,7 +116,7 @@ MTracker.shared.initialize(MTrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_...",
 | React Native | tarball (raw) | `react-native/mocoplex-corp-mtracker-react-native-1.0.0.tgz` |
 | Flutter | git ref + path | `ref: v1.0.0`, `path: flutter` |
 | iOS | SPM (repo 루트 Package.swift) | `.package(url: …/mtracker-sdk.git, from: "1.0.0")` |
-| iOS | CocoaPods (소스 pod) | `pod 'MTracker', :git => …, :tag => 'v1.0.0'` |
+| iOS | CocoaPods (소스 pod) | `pod 'Ja0TrackerSDK', :git => …, :tag => 'v1.0.0'` |
 
 이 저장소의 아티팩트는 내부 모노레포에서 빌드되어 배포됩니다(빌드/릴리스 절차는 내부
 `docs/sdk-github-release.md`). 버그/문의: <help-myshop@mocoplex.com>.

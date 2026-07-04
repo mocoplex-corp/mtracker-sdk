@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Server-resolved, already-localized surfaces the SDK renders: a version-update prompt,
 /// in-app messages / announcements / review prompts, and the remote-config map. The host
-/// app can override the default UI via `MTracker.shared.onUpdateAvailable` / `onMessage`.
+/// app can override the default UI via `Ja0Tracker.shared.onUpdateAvailable` / `onMessage`.
 
 /// A server-driven version-update prompt (docs/appops-contract §2 `update`).
 public struct UpdateInfo: Sendable {

@@ -7,19 +7,19 @@ import Foundation
 ///   - POST {ingestBaseURL}/v1/push/register — push token registration. HMAC-signed exactly
 ///     like events, reusing `HTTPClient.sign` (the shared signer).
 final class AppOpsClient: @unchecked Sendable {
-    private let config: MTrackerConfig
+    private let config: Ja0TrackerConfig
     private let logger: MTLogger
     private let session: URLSession
 
     static let appOpsPath = "/v1/appops"
     static let pushRegisterPath = "/v1/push/register"
 
-    init(config: MTrackerConfig, logger: MTLogger) {
+    init(config: Ja0TrackerConfig, logger: MTLogger) {
         self.config = config
         self.logger = logger
         let sc = URLSessionConfiguration.default
         sc.timeoutIntervalForRequest = 15
-        sc.httpAdditionalHeaders = ["User-Agent": "mtracker-ios/\(MTracker.sdkVersion)"]
+        sc.httpAdditionalHeaders = ["User-Agent": "mtracker-ios/\(Ja0Tracker.sdkVersion)"]
         self.session = URLSession(configuration: sc)
     }
 

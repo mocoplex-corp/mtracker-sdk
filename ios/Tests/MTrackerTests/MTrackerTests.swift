@@ -1,13 +1,13 @@
 import XCTest
 import CryptoKit
-@testable import MTracker
+@testable import Ja0TrackerSDK
 
 final class MTrackerTests: XCTestCase {
 
     // MARK: - Config
 
     func testConfigDefaults() {
-        let config = MTrackerConfig(sdkKey: "pk_ja0_demo", sdkSecret: "secret", appId: "app-1")
+        let config = Ja0TrackerConfig(sdkKey: "pk_ja0_demo", sdkSecret: "secret", appId: "app-1")
         XCTAssertEqual(config.ingestBaseURL, "https://ingest-mtracker.ja0.com")
         XCTAssertEqual(config.clickdBaseURL, "https://go-mtracker.ja0.com")
         XCTAssertTrue(config.waitForConsent)
@@ -48,7 +48,7 @@ final class MTrackerTests: XCTestCase {
     // MARK: - Batch encoding (contract §3 wire shape)
 
     func testBatchEnvelopeShape() throws {
-        let config = MTrackerConfig(sdkKey: "pk_ja0_demo", sdkSecret: "s", appId: "app-1")
+        let config = Ja0TrackerConfig(sdkKey: "pk_ja0_demo", sdkSecret: "s", appId: "app-1")
         let http = HTTPClient(config: config, logger: MTLogger(level: .none))
 
         let params = try JSONSerialization.data(withJSONObject: ["level": 5])
@@ -77,7 +77,7 @@ final class MTrackerTests: XCTestCase {
     }
 
     func testBatchOmitsEmptyOptionalFields() throws {
-        let config = MTrackerConfig(sdkKey: "k", sdkSecret: "s", appId: "app-1")
+        let config = Ja0TrackerConfig(sdkKey: "k", sdkSecret: "s", appId: "app-1")
         let http = HTTPClient(config: config, logger: MTLogger(level: .none))
         let event = QueuedEvent(
             eventId: "e", appId: "app-1", installId: "i", name: "install", ts: 1
@@ -127,7 +127,7 @@ final class MTrackerTests: XCTestCase {
 
     func testDeepLinkParsing() {
         let url = URL(string: "https://go-mtracker.ja0.com/product/123?promo=SUMMER&ref=abc")!
-        let link = MTracker.parseDeepLink(url, isDeferred: false)
+        let link = Ja0Tracker.parseDeepLink(url, isDeferred: false)
         XCTAssertEqual(link.path, "/product/123")
         XCTAssertEqual(link.params["promo"], "SUMMER")
         XCTAssertEqual(link.params["ref"], "abc")

@@ -21,7 +21,7 @@ AdAttributionKit, AppTrackingTransparency, UIKit, Security).
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/mocoplex/mtracker-ios.git", from: "1.0.0")
+    .package(url: "https://github.com/mocoplex-corp/mtracker-sdk.git", from: "1.0.0")
 ]
 ```
 
@@ -34,11 +34,11 @@ dashboard (`/dashboard/mtracker/apps`): the public `sdkKey`, the one-time `sdkSe
 ### UIKit (`AppDelegate`)
 
 ```swift
-import MTracker
+import Ja0TrackerSDK
 
 func application(_ app: UIApplication,
                 didFinishLaunchingWithOptions opts: [...]?) -> Bool {
-    MTracker.shared.initialize(MTrackerConfig(
+    Ja0Tracker.shared.initialize(Ja0TrackerConfig(
         sdkKey:    "pk_ja0_demo",
         sdkSecret: "sk_ja0_demo_secret_change_me",   // from dashboard (shown once)
         appId:     "00000000-0000-0000-0000-0000000000a2",
@@ -54,7 +54,7 @@ func application(_ app: UIApplication,
 @main
 struct DemoApp: App {
     init() {
-        MTracker.shared.initialize(MTrackerConfig(
+        Ja0Tracker.shared.initialize(Ja0TrackerConfig(
             sdkKey: "pk_ja0_demo",
             sdkSecret: "sk_ja0_demo_secret_change_me",
             appId: "00000000-0000-0000-0000-0000000000a2"))
@@ -62,7 +62,7 @@ struct DemoApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .onOpenURL { url in MTracker.shared.handleDeepLink(url) }   // Universal Links
+                .onOpenURL { url in Ja0Tracker.shared.handleDeepLink(url) }   // Universal Links
         }
     }
 }
@@ -72,8 +72,8 @@ struct DemoApp: App {
 
 ```swift
 Task {
-    let status = await MTracker.shared.requestTrackingConsent()   // ATT system prompt
-    MTracker.shared.setConsent(Consent(analytics: true, attribution: true, ads: true))
+    let status = await Ja0Tracker.shared.requestTrackingConsent()   // ATT system prompt
+    Ja0Tracker.shared.setConsent(Consent(analytics: true, attribution: true, ads: true))
 }
 ```
 
@@ -87,15 +87,15 @@ Task {
 ### Attribution + deep links
 
 ```swift
-MTracker.shared.onAttribution { data in /* data.source, data.campaign, data.confidence */ }
-MTracker.shared.onDeepLink   { link in /* route by link.path + link.params */ }
+Ja0Tracker.shared.onAttribution { data in /* data.source, data.campaign, data.confidence */ }
+Ja0Tracker.shared.onDeepLink   { link in /* route by link.path + link.params */ }
 ```
 
 ### In-app events
 
 ```swift
-MTracker.shared.trackEvent("level_up", ["level": 5])
-MTracker.shared.trackEvent("purchase", ["revenue": 9900, "currency": "KRW", "itemId": "sku_1"])
+Ja0Tracker.shared.trackEvent("level_up", ["level": 5])
+Ja0Tracker.shared.trackEvent("purchase", ["revenue": 9900, "currency": "KRW", "itemId": "sku_1"])
 ```
 
 `revenue` / `currency` in the params are lifted to the top-level contract fields. Events
@@ -106,7 +106,7 @@ backoff; nothing is lost across relaunches or offline periods.
 
 ```swift
 Task {
-    if let ad = await MTracker.shared.ads.load(slotId: "home_feed_slot") {
+    if let ad = await Ja0Tracker.shared.ads.load(slotId: "home_feed_slot") {
         let adView = MTNativeAdView()
         adView.bind(ad)          // renders assets; fires viewability impression + click beacons
         // add adView to your hierarchy, or read `ad.assets` and render fully custom
@@ -134,7 +134,7 @@ ts, session_id?, revenue?, currency?, params?, match_token?, device_fp? } ] }`.
 - Success `200 {accepted, duplicates}`; `401` = bad key/HMAC (delivery pauses, events
   retained); `429` honours `Retry-After`.
 
-Base URLs are overridable via `MTrackerConfig(ingestBaseURL:clickdBaseURL:adBaseURL:)`.
+Base URLs are overridable via `Ja0TrackerConfig(ingestBaseURL:clickdBaseURL:adBaseURL:)`.
 
 ## Info.plist — ATT usage string (required for the prompt)
 
@@ -168,19 +168,19 @@ swift test                  # run the unit tests (HMAC, ULID, batch encoding, ad
 ```
 
 Or add the package in Xcode: **File ▸ Add Package Dependencies…** and point at this repo /
-the published Git URL, then `import MTracker`.
+the published Git URL, then `import Ja0TrackerSDK`.
 
 To ship a binary for CocoaPods, build an XCFramework:
 
 ```bash
-xcodebuild archive -scheme MTracker -destination "generic/platform=iOS" \
+xcodebuild archive -scheme Ja0TrackerSDK -destination "generic/platform=iOS" \
   -archivePath build/ios -SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-xcodebuild archive -scheme MTracker -destination "generic/platform=iOS Simulator" \
+xcodebuild archive -scheme Ja0TrackerSDK -destination "generic/platform=iOS Simulator" \
   -archivePath build/sim -SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES
 xcodebuild -create-xcframework \
-  -framework build/ios.xcarchive/Products/Library/Frameworks/MTracker.framework \
-  -framework build/sim.xcarchive/Products/Library/Frameworks/MTracker.framework \
-  -output MTracker.xcframework
+  -framework build/ios.xcarchive/Products/Library/Frameworks/Ja0TrackerSDK.framework \
+  -framework build/sim.xcarchive/Products/Library/Frameworks/Ja0TrackerSDK.framework \
+  -output Ja0TrackerSDK.xcframework
 ```
 
 ## Demo credentials

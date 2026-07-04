@@ -13,22 +13,22 @@ import UIKit
 ///
 /// Usage:
 /// ```swift
-/// MTracker.shared.initialize(MTrackerConfig(
+/// Ja0Tracker.shared.initialize(Ja0TrackerConfig(
 ///     sdkKey: "pk_ja0_demo", sdkSecret: "…", appId: "…"))
-/// let status = await MTracker.shared.requestTrackingConsent()   // ATT prompt
-/// MTracker.shared.setConsent(Consent(analytics: true, attribution: true, ads: true))
-/// MTracker.shared.onAttribution { data in /* route by data.source/campaign */ }
-/// MTracker.shared.onDeepLink { link in /* route by link.path/params */ }
-/// MTracker.shared.trackEvent("purchase", ["revenue": 9900, "currency": "KRW"])
-/// let ad = await MTracker.shared.ads.load(slotId: "home_feed_slot")
+/// let status = await Ja0Tracker.shared.requestTrackingConsent()   // ATT prompt
+/// Ja0Tracker.shared.setConsent(Consent(analytics: true, attribution: true, ads: true))
+/// Ja0Tracker.shared.onAttribution { data in /* route by data.source/campaign */ }
+/// Ja0Tracker.shared.onDeepLink { link in /* route by link.path/params */ }
+/// Ja0Tracker.shared.trackEvent("purchase", ["revenue": 9900, "currency": "KRW"])
+/// let ad = await Ja0Tracker.shared.ads.load(slotId: "home_feed_slot")
 /// ```
-public final class MTracker {
+public final class Ja0Tracker {
 
     /// SDK version, surfaced in the User-Agent and available to host apps.
     public static let sdkVersion = "1.0.0"
 
     /// Shared singleton facade.
-    public static let shared = MTracker()
+    public static let shared = Ja0Tracker()
 
     // Persisted cumulative session accounting (App Ops review gate + delivery params).
     private static let sessionSecKey = "mt_appops_session_sec_total"
@@ -38,7 +38,7 @@ public final class MTracker {
     private let lock = NSRecursiveLock()
 
     private var initialized = false
-    private var config: MTrackerConfig?
+    private var config: Ja0TrackerConfig?
     private var consent = Consent()
     private var attAuthorized = false
 
@@ -62,7 +62,7 @@ public final class MTracker {
     private var pendingAttribution: AttributionData?
     private var pendingDeepLink: DeepLinkData?
 
-    /// Ads accessor — `MTracker.shared.ads.load(slotId:)`. Non-nil after `initialize`.
+    /// Ads accessor — `Ja0Tracker.shared.ads.load(slotId:)`. Non-nil after `initialize`.
     public private(set) var ads: MTAds!
 
     private init() {}
@@ -72,7 +72,7 @@ public final class MTracker {
     /// Initialize once at app start (e.g. `application(_:didFinishLaunchingWithOptions:)`).
     /// Registers SKAN/AAK (always-on aggregate path), resolves install identity, emits
     /// the first-launch lifecycle event, and starts session tracking.
-    public func initialize(_ config: MTrackerConfig) {
+    public func initialize(_ config: Ja0TrackerConfig) {
         safe {
             lock.lock(); defer { lock.unlock() }
             guard !initialized else { return }
@@ -130,7 +130,7 @@ public final class MTracker {
             }
 
             initialized = true
-            logger.info("initialized (\(MTracker.sdkVersion)) app=\(config.appId)")
+            logger.info("initialized (\(Ja0Tracker.sdkVersion)) app=\(config.appId)")
 
             // Aggregate attribution runs regardless of consent (docs/attribution.md §2.1).
             skan?.registerSKAdNetwork()
