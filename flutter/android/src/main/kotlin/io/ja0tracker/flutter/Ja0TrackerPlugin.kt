@@ -45,7 +45,7 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
         // io.ja0tracker.sdk.ads.MTNativeAdView.
         binding.platformViewRegistry.registerViewFactory(
             MTNativeAdViewFactory.VIEW_TYPE,
-            MTNativeAdViewFactory(),
+            MTNativeAdViewFactory(messenger),
         )
     }
 

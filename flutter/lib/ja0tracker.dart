@@ -613,6 +613,7 @@ class MTNativeAd extends StatelessWidget {
     required this.slotId,
     this.useDefaultTemplate = true,
     this.onAdClicked,
+    this.onAdImpression,
   });
 
   final String slotId;
@@ -623,7 +624,28 @@ class MTNativeAd extends StatelessWidget {
   /// Fired when the user taps the ad.
   final void Function(String adId)? onAdClicked;
 
+  /// Fired once when the viewability-gated impression beacon fires.
+  final void Function(String adId)? onAdImpression;
+
   static const String _viewType = 'io.ja0tracker/native_ad_view';
+
+  /// Wires a per-view MethodChannel so the native ad view can surface
+  /// impression/click events to Dart (the native Core owns the actual tracking).
+  void _onPlatformViewCreated(int id) {
+    final channel = MethodChannel('io.ja0tracker/native_ad_view_$id');
+    channel.setMethodCallHandler((call) async {
+      final args = call.arguments;
+      final adId = (args is Map) ? (args['adId'] as String? ?? '') : '';
+      switch (call.method) {
+        case 'onAdClicked':
+          onAdClicked?.call(adId);
+          break;
+        case 'onAdImpression':
+          onAdImpression?.call(adId);
+          break;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -632,25 +654,23 @@ class MTNativeAd extends StatelessWidget {
       'useDefaultTemplate': useDefaultTemplate,
     };
 
-    // TODO(native): implement the PlatformViewFactory on both platforms:
-    //   - Android: register `_viewType` -> a PlatformView wrapping MTNativeAdView.
-    //   - iOS: register `_viewType` -> a FlutterPlatformView wrapping MTNativeAdView.
-    // Ad tap/impression events flow back via a per-view MethodChannel (onAdClicked).
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return AndroidView(
           viewType: _viewType,
           creationParams: creationParams,
           creationParamsCodec: const StandardMessageCodec(),
+          onPlatformViewCreated: _onPlatformViewCreated,
         );
       case TargetPlatform.iOS:
         return UiKitView(
           viewType: _viewType,
           creationParams: creationParams,
           creationParamsCodec: const StandardMessageCodec(),
+          onPlatformViewCreated: _onPlatformViewCreated,
         );
       default:
-        // TODO(native): unsupported platform — render a benign empty box.
+        // Unsupported platform — render a benign empty box.
         return const SizedBox.shrink();
     }
   }

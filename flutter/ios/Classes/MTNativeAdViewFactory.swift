@@ -24,7 +24,7 @@ class MTNativeAdViewFactory: NSObject, FlutterPlatformViewFactory {
     ) -> FlutterPlatformView {
         let params = args as? [String: Any]
         let slotId = params?["slotId"] as? String
-        return MTNativeAdPlatformView(frame: frame, slotId: slotId)
+        return MTNativeAdPlatformView(frame: frame, viewId: viewId, messenger: messenger, slotId: slotId)
     }
 
     func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
@@ -35,13 +35,23 @@ class MTNativeAdViewFactory: NSObject, FlutterPlatformViewFactory {
 private class MTNativeAdPlatformView: NSObject, FlutterPlatformView {
 
     private let adView: MTNativeAdView
+    private let channel: FlutterMethodChannel
 
-    init(frame: CGRect, slotId: String?) {
+    init(frame: CGRect, viewId: Int64, messenger: FlutterBinaryMessenger, slotId: String?) {
         self.adView = MTNativeAdView(frame: frame)
+        self.channel = FlutterMethodChannel(
+            name: "io.ja0tracker/native_ad_view_\(viewId)", binaryMessenger: messenger)
         super.init()
         if let slotId, !slotId.isEmpty {
             Task { @MainActor in
                 if let ad = await Ja0Tracker.shared.ads.load(slotId) {
+                    // Core beacons fire regardless; forward the events to Dart (main thread).
+                    self.adView.onImpression = { [weak self] in
+                        self?.channel.invokeMethod("onAdImpression", arguments: ["adId": ad.adId])
+                    }
+                    self.adView.onClick = { [weak self] in
+                        self?.channel.invokeMethod("onAdClicked", arguments: ["adId": ad.adId])
+                    }
                     self.adView.bind(ad)
                 }
             }

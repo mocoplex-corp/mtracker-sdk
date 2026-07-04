@@ -84,6 +84,7 @@ See `example/lib/main.dart` for a runnable-shaped minimal app.
 - App Ops — remote config / in-app messages / update prompts / push register:
   `https://api-mtracker.ja0.com` (`GET /v1/appops`, `POST /v1/push/register`). Served by the
   **api** service (not ingest); the native cores default to this host.
+- Native ad slots: `https://ad-mtracker.ja0.com` (`POST /v1/ad`)
 - clickd / deep links: `https://go-mtracker.ja0.com`
 
 Override the ingest/clickd hosts via `Ja0TrackerConfig(ingestBaseUrl: ..., clickdBaseUrl: ...)`.
@@ -98,6 +99,7 @@ The App Ops host defaults to the api service and normally needs no override.
   `associated-domains` (`applinks:go-mtracker.ja0.com`) + `NSUserTrackingUsageDescription`
   (iOS). `PrivacyInfo.xcprivacy` ships as a resource of the `Ja0TrackerSDK` pod.
 - (Optional) regenerate the Pigeon code: `dart run pigeon --input pigeons/messages.dart`.
-- `TODO(core)`: `MTNativeAdView` does not yet expose click/impression listeners, so
-  `MTNativeAd(onAdClicked:)` is not fired until the Core adds them (beacons still fire).
+- `MTNativeAd(onAdClicked:, onAdImpression:)` are wired: the Core `MTNativeAdView`
+  exposes `onImpression`/`onClick`, and the PlatformView forwards them to Dart over a
+  per-view MethodChannel (`io.ja0tracker/native_ad_view_<id>`).
 - `TODO(release)` set `publish_to` and publish to pub.dev.
