@@ -25,7 +25,7 @@ import UIKit
 public final class Ja0Tracker {
 
     /// SDK version, surfaced in the User-Agent and available to host apps.
-    public static let sdkVersion = "1.0.2"
+    public static let sdkVersion = "1.0.3"
 
     /// Shared singleton facade.
     public static let shared = Ja0Tracker()
