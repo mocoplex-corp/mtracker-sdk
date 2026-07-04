@@ -37,12 +37,12 @@ dependencies {
 레지스트리 없이 tarball URL로 설치합니다(무인증).
 
 ```bash
-npm install https://raw.githubusercontent.com/mocoplex-corp/mtracker-sdk/v1.0.0/react-native/mocoplex-corp-mtracker-react-native-1.0.0.tgz
+npm install https://raw.githubusercontent.com/mocoplex-corp/mtracker-sdk/v1.0.0/react-native/mocoplex-corp-ja0tracker-react-native-1.0.0.tgz
 cd ios && pod install   # iOS 네이티브는 별도(아래 iOS 참고)
 ```
 
 ```ts
-import { MTracker } from '@mocoplex-corp/mtracker-react-native';
+import { MTracker } from '@mocoplex-corp/ja0tracker-react-native';
 MTracker.initialize({ sdkKey: 'pk_...', sdkSecret: 'sk_...', appId: 'YOUR_APP_ID' });
 ```
 
@@ -113,7 +113,7 @@ Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_.
 | 플랫폼 | 방식 | 좌표 |
 |---|---|---|
 | Android | 정적 Maven (raw) | `io.ja0tracker:ja0tracker-android:1.0.0` |
-| React Native | tarball (raw) | `react-native/mocoplex-corp-mtracker-react-native-1.0.0.tgz` |
+| React Native | tarball (raw) | `react-native/mocoplex-corp-ja0tracker-react-native-1.0.0.tgz` |
 | Flutter | git ref + path | `ref: v1.0.0`, `path: flutter` |
 | iOS | SPM (repo 루트 Package.swift) | `.package(url: …/mtracker-sdk.git, from: "1.0.0")` |
 | iOS | CocoaPods (소스 pod) | `pod 'Ja0TrackerSDK', :git => …, :tag => 'v1.0.0'` |

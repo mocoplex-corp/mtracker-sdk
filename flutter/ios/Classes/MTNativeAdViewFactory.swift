@@ -1,6 +1,6 @@
 import Flutter
 import UIKit
-import MTracker
+import Ja0TrackerSDK
 
 /// FlutterPlatformViewFactory for the `MTNativeAd` Flutter widget. Registered under
 /// [viewType] (matching `_viewType` in lib/mtracker.dart). Each view wraps the Core's
@@ -8,7 +8,7 @@ import MTracker
 /// this factory only requests the ad and hosts the Core view.
 class MTNativeAdViewFactory: NSObject, FlutterPlatformViewFactory {
 
-    static let viewType = "io.mtracker/native_ad_view"
+    static let viewType = "io.ja0tracker/native_ad_view"
 
     private let messenger: FlutterBinaryMessenger
 
@@ -41,7 +41,7 @@ private class MTNativeAdPlatformView: NSObject, FlutterPlatformView {
         super.init()
         if let slotId, !slotId.isEmpty {
             Task { @MainActor in
-                if let ad = await MTracker.shared.ads.load(slotId) {
+                if let ad = await Ja0Tracker.shared.ads.load(slotId) {
                     self.adView.bind(ad)
                 }
             }

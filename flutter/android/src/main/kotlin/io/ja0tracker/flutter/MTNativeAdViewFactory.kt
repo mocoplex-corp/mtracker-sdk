@@ -1,4 +1,4 @@
-package io.mtracker.flutter
+package io.ja0tracker.flutter
 
 import android.content.Context
 import android.view.View
@@ -29,7 +29,7 @@ class MTNativeAdViewFactory :
     }
 
     companion object {
-        const val VIEW_TYPE = "io.mtracker/native_ad_view"
+        const val VIEW_TYPE = "io.ja0tracker/native_ad_view"
     }
 }
 

@@ -17,8 +17,8 @@ import 'src/messages.g.dart';
 
 enum LogLevel { none, error, warn, info, debug }
 
-class MTrackerConfig {
-  const MTrackerConfig({
+class Ja0TrackerConfig {
+  const Ja0TrackerConfig({
     required this.sdkKey,
     required this.sdkSecret,
     required this.appId,
@@ -201,10 +201,10 @@ typedef MessageCallback = void Function(AppMessage data);
 
 // ---- Public facade ----
 
-/// Ads accessor, reached via `MTracker.instance.ads` (docs/ads.md).
+/// Ads accessor, reached via `Ja0Tracker.instance.ads` (docs/ads.md).
 class MTAds {
   MTAds._(this._host);
-  final MtrackerHostApi _host;
+  final Ja0TrackerHostApi _host;
 
   /// Load a native ad by slot ID. Resolves null on no-fill (docs/ads.md §3, §4).
   Future<NativeAd?> load(String slotId) async {
@@ -218,20 +218,20 @@ class MTAds {
   }
 }
 
-class MTracker {
-  MTracker._() {
+class Ja0Tracker {
+  Ja0Tracker._() {
     // Register a handler to receive native -> Dart callbacks. Pigeon's
-    // MtrackerFlutterApi is an interface with `onAttribution(AttributionMessage)` /
+    // Ja0TrackerFlutterApi is an interface with `onAttribution(AttributionMessage)` /
     // `onDeepLink(DeepLinkMessage)`; those method names collide with the public
     // `onAttribution(cb)` / `onDeepLink(cb)` registration API, so the interface is
     // implemented by a separate [_FlutterApiHandler] that forwards into this facade.
-    MtrackerFlutterApi.setUp(_FlutterApiHandler(this));
+    Ja0TrackerFlutterApi.setUp(_FlutterApiHandler(this));
     ads = MTAds._(_host);
   }
 
-  static final MTracker instance = MTracker._();
+  static final Ja0Tracker instance = Ja0Tracker._();
 
-  final MtrackerHostApi _host = MtrackerHostApi();
+  final Ja0TrackerHostApi _host = Ja0TrackerHostApi();
   late final MTAds ads;
 
   AttributionCallback? _attributionCallback;
@@ -245,7 +245,7 @@ class MTracker {
   final List<AppMessage> _pendingMessages = <AppMessage>[];
 
   /// Initialize once at app start.
-  Future<void> initialize(MTrackerConfig config) async {
+  Future<void> initialize(Ja0TrackerConfig config) async {
     try {
       await _host.initialize(ConfigMessage(
         sdkKey: config.sdkKey,
@@ -453,13 +453,13 @@ class MTracker {
   }
 }
 
-/// Implements the Pigeon-generated [MtrackerFlutterApi] (native -> Dart) and forwards
-/// each callback into the [MTracker] facade. Kept separate from [MTracker] because the
+/// Implements the Pigeon-generated [Ja0TrackerFlutterApi] (native -> Dart) and forwards
+/// each callback into the [Ja0Tracker] facade. Kept separate from [Ja0Tracker] because the
 /// interface method names (`onAttribution`/`onDeepLink`) collide with the facade's
 /// public callback-registration methods of the same name.
-class _FlutterApiHandler implements MtrackerFlutterApi {
+class _FlutterApiHandler implements Ja0TrackerFlutterApi {
   _FlutterApiHandler(this._owner);
-  final MTracker _owner;
+  final Ja0Tracker _owner;
 
   @override
   void onAttribution(AttributionMessage data) => _owner._dispatchAttribution(data);
@@ -623,7 +623,7 @@ class MTNativeAd extends StatelessWidget {
   /// Fired when the user taps the ad.
   final void Function(String adId)? onAdClicked;
 
-  static const String _viewType = 'io.mtracker/native_ad_view';
+  static const String _viewType = 'io.ja0tracker/native_ad_view';
 
   @override
   Widget build(BuildContext context) {

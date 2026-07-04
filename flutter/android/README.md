@@ -8,22 +8,22 @@ queue, attribution, session, or ad-render logic is duplicated here.
 
 - `build.gradle` — depends on `io.ja0tracker:ja0tracker-android` (the shared Core AAR) +
   coroutines.
-- `src/main/kotlin/io/mtracker/flutter/MtrackerPlugin.kt` — `FlutterPlugin` implementing the
-  Pigeon `MtrackerHostApi` by delegating to `io.ja0tracker.sdk.Ja0Tracker` (`initialize`,
+- `src/main/kotlin/io/mtracker/flutter/Ja0TrackerPlugin.kt` — `FlutterPlugin` implementing the
+  Pigeon `Ja0TrackerHostApi` by delegating to `io.ja0tracker.sdk.Ja0Tracker` (`initialize`,
   `requestTrackingConsent`, `setConsent`, `trackEvent`, `loadAd`) and pushing
-  `onAttribution`/`onDeepLink` back through the generated `MtrackerFlutterApi`. Registers
+  `onAttribution`/`onDeepLink` back through the generated `Ja0TrackerFlutterApi`. Registers
   the ad PlatformView factory.
 - `src/main/kotlin/io/mtracker/flutter/Messages.g.kt` — Pigeon output (hand-written to match
   `dart run pigeon`; regenerate to overwrite).
 - `src/main/kotlin/io/mtracker/flutter/MTNativeAdViewFactory.kt` — `PlatformViewFactory`
-  registering `io.mtracker/native_ad_view`, wrapping `io.ja0tracker.sdk.ads.MTNativeAdView`.
+  registering `io.ja0tracker/native_ad_view`, wrapping `io.ja0tracker.sdk.ads.MTNativeAdView`.
 
 ## How it wires to the Core
 
-`MtrackerPlugin` holds an `io.ja0tracker.sdk.Ja0Tracker` reference and forwards Host API calls
+`Ja0TrackerPlugin` holds an `io.ja0tracker.sdk.Ja0Tracker` reference and forwards Host API calls
 straight to it. `requestTrackingConsent` and `loadAd` bridge the Core's `suspend fun`s onto
 a coroutine and complete the async Pigeon callback. Attribution/deep-link callbacks are
-registered once against the Core and relayed via `MtrackerFlutterApi`.
+registered once against the Core and relayed via `Ja0TrackerFlutterApi`.
 
 ## Client build steps
 

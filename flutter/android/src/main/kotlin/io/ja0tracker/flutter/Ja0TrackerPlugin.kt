@@ -1,4 +1,4 @@
-package io.mtracker.flutter
+package io.ja0tracker.flutter
 
 import android.content.Context
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -21,16 +21,16 @@ import kotlinx.coroutines.launch
 /**
  * mtracker Flutter plugin (Android).
  *
- * Implements the Pigeon [MtrackerHostApi] by DELEGATING to the shared Android Core
+ * Implements the Pigeon [Ja0TrackerHostApi] by DELEGATING to the shared Android Core
  * (`io.ja0tracker.sdk.Ja0Tracker`) — HMAC signing, the event queue, attribution, sessions and
  * ad rendering all live in the Core. Native -> Dart callbacks (`onAttribution` /
- * `onDeepLink`) are pushed through the generated [MtrackerFlutterApi]. Registers the
+ * `onDeepLink`) are pushed through the generated [Ja0TrackerFlutterApi]. Registers the
  * [MTNativeAdViewFactory] PlatformView for `MTNativeAd`.
  */
-class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
+class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
 
     private var applicationContext: Context? = null
-    private var flutterApi: MtrackerFlutterApi? = null
+    private var flutterApi: Ja0TrackerFlutterApi? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var callbacksWired = false
 
@@ -38,8 +38,8 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
         applicationContext = binding.applicationContext
         val messenger: BinaryMessenger = binding.binaryMessenger
 
-        MtrackerHostApi.setUp(messenger, this)
-        flutterApi = MtrackerFlutterApi(messenger)
+        Ja0TrackerHostApi.setUp(messenger, this)
+        flutterApi = Ja0TrackerFlutterApi(messenger)
 
         // Register the native ad PlatformView (docs/ads.md §6). The factory wraps the Core's
         // io.ja0tracker.sdk.ads.MTNativeAdView.
@@ -50,12 +50,12 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        MtrackerHostApi.setUp(binding.binaryMessenger, null)
+        Ja0TrackerHostApi.setUp(binding.binaryMessenger, null)
         flutterApi = null
         applicationContext = null
     }
 
-    // ---- MtrackerHostApi (Dart -> native): delegate to the Core ----
+    // ---- Ja0TrackerHostApi (Dart -> native): delegate to the Core ----
 
     override fun initialize(config: ConfigMessage) {
         val context = applicationContext ?: return

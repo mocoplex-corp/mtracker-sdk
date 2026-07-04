@@ -27,19 +27,19 @@ dependencies:
 1. Provide the native cores so the plugin can resolve them:
    - **Android** — publish `sdk/android` to a Maven repo (coordinate
      `io.ja0tracker:ja0tracker-android:1.0.0`) or `includeBuild("sdk/android")` in the monorepo.
-   - **iOS** — ship an `MTracker.podspec` (XCFramework/source) from `sdk/ios`, so
-     `s.dependency 'MTracker'` in `ios/mtracker.podspec` resolves; then `cd ios && pod install`.
+   - **iOS** — ship an `Ja0TrackerSDK.podspec` (XCFramework/source) from `sdk/ios`, so
+     `s.dependency 'Ja0TrackerSDK'` in `ios/mtracker.podspec` resolves; then `cd ios && pod install`.
 2. `flutter pub get`, then `flutter run` — Flutter autolinks the plugin on both platforms.
 3. (Optional) regenerate the Pigeon code: `dart run pigeon --input pigeons/messages.dart`.
 
 ## Usage
 
 ```dart
-import 'package:mtracker/mtracker.dart';
+import 'package:ja0tracker/ja0tracker.dart';
 
 // 1. Initialize once at app start (sdkKey + sdkSecret + appId are all required)
-await MTracker.instance.initialize(
-  const MTrackerConfig(
+await Ja0Tracker.instance.initialize(
+  const Ja0TrackerConfig(
     sdkKey: 'APP_SDK_KEY',
     sdkSecret: 'APP_SDK_SECRET',
     appId: 'APP_UUID',
@@ -48,20 +48,20 @@ await MTracker.instance.initialize(
 );
 
 // 2. Consent (iOS shows the ATT prompt; Android resolves to granted)
-final status = await MTracker.instance.requestTrackingConsent();
-await MTracker.instance.setConsent(
+final status = await Ja0Tracker.instance.requestTrackingConsent();
+await Ja0Tracker.instance.setConsent(
   const Consent(analytics: true, attribution: true, ads: true),
 );
 
 // 3. Attribution + deferred deep link callbacks
-MTracker.instance.onAttribution((data) { /* data.source, data.campaign, data.confidence */ });
-MTracker.instance.onDeepLink((link) { /* route by link.path + link.params */ });
+Ja0Tracker.instance.onAttribution((data) { /* data.source, data.campaign, data.confidence */ });
+Ja0Tracker.instance.onDeepLink((link) { /* route by link.path + link.params */ });
 
 // 4. In-app events
-MTracker.instance.trackEvent('purchase', {'revenue': 9900, 'currency': 'KRW'});
+Ja0Tracker.instance.trackEvent('purchase', {'revenue': 9900, 'currency': 'KRW'});
 
 // 5. Native ads (docs/ads.md)
-final ad = await MTracker.instance.ads.load('home_feed_slot');   // imperative
+final ad = await Ja0Tracker.instance.ads.load('home_feed_slot');   // imperative
 // or render the widget:
 const MTNativeAd(slotId: 'home_feed_slot');
 ```
@@ -75,7 +75,7 @@ See `example/lib/main.dart` for a runnable-shaped minimal app.
   `dart run pigeon --input pigeons/messages.dart`.
 - `lib/src/messages.g.dart` — Pigeon output, hand-written to match `dart run pigeon`
   (Dart/Kotlin/Swift sides ship matching codecs so it builds without running pigeon).
-- `android/`, `ios/` — thin native plugin bridges that implement the Pigeon `MtrackerHostApi`
+- `android/`, `ios/` — thin native plugin bridges that implement the Pigeon `Ja0TrackerHostApi`
   by delegating to the shared cores, and register the `MTNativeAd` PlatformView (see READMEs).
 
 ## Backend endpoints
@@ -83,16 +83,16 @@ See `example/lib/main.dart` for a runnable-shaped minimal app.
 - Ingest: `https://ingest-mtracker.ja0.com` (batch `POST /v1/events`, JSON + SDK key + HMAC)
 - clickd / deep links: `https://go-mtracker.ja0.com`
 
-Override via `MTrackerConfig(ingestBaseUrl: ..., clickdBaseUrl: ...)`.
+Override via `Ja0TrackerConfig(ingestBaseUrl: ..., clickdBaseUrl: ...)`.
 
 ## Client build / pre-release tasks
 
 - Provide the native cores so the plugin resolves them: publish the
-  `io.ja0tracker:ja0tracker-android` AAR from `sdk/android`, and ship an `MTracker.podspec`
-  (XCFramework/source) from `sdk/ios` so `s.dependency 'MTracker'` resolves.
+  `io.ja0tracker:ja0tracker-android` AAR from `sdk/android`, and ship an `Ja0TrackerSDK.podspec`
+  (XCFramework/source) from `sdk/ios` so `s.dependency 'Ja0TrackerSDK'` resolves.
 - Host-app config: deep-link `<intent-filter>` for `go-mtracker.ja0.com` (Android) and
   `associated-domains` (`applinks:go-mtracker.ja0.com`) + `NSUserTrackingUsageDescription`
-  (iOS). `PrivacyInfo.xcprivacy` ships as a resource of the `MTracker` pod.
+  (iOS). `PrivacyInfo.xcprivacy` ships as a resource of the `Ja0TrackerSDK` pod.
 - (Optional) regenerate the Pigeon code: `dart run pigeon --input pigeons/messages.dart`.
 - `TODO(core)`: `MTNativeAdView` does not yet expose click/impression listeners, so
   `MTNativeAd(onAdClicked:)` is not fired until the Core adds them (beacons still fire).

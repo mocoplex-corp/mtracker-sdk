@@ -1,9 +1,9 @@
 // mtracker (Flutter) — Android plugin module.
 //
 // Thin Pigeon + PlatformView bridge that DELEGATES to the shared Android Core
-// (io.ja0tracker.sdk / the `mtracker-android` AAR). No Core logic is duplicated here.
+// (io.ja0tracker.sdk / the `ja0tracker-android` AAR). No Core logic is duplicated here.
 
-group 'io.mtracker.flutter'
+group 'io.ja0tracker.flutter'
 version '1.0.0'
 
 buildscript {
@@ -29,7 +29,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
-    namespace 'io.mtracker.flutter'
+    namespace 'io.ja0tracker.flutter'
     compileSdk 34
 
     compileOptions {

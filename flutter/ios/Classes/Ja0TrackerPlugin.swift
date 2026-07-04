@@ -1,25 +1,25 @@
 import Flutter
 import UIKit
-import MTracker
+import Ja0TrackerSDK
 
 /// mtracker Flutter plugin (iOS).
 ///
-/// Implements the Pigeon `MtrackerHostApi` by DELEGATING to the shared iOS Core
-/// (`MTracker.shared`) — HMAC signing, event queue, attribution (SKAN/AAK/clipboard),
+/// Implements the Pigeon `Ja0TrackerHostApi` by DELEGATING to the shared iOS Core
+/// (`Ja0Tracker.shared`) — HMAC signing, event queue, attribution (SKAN/AAK/clipboard),
 /// sessions and ad rendering all live in the Core. Native -> Dart callbacks
-/// (`onAttribution` / `onDeepLink`) are pushed through the generated `MtrackerFlutterApi`.
+/// (`onAttribution` / `onDeepLink`) are pushed through the generated `Ja0TrackerFlutterApi`.
 /// Registers the `MTNativeAdViewFactory` PlatformView for `MTNativeAd`.
-public class MtrackerPlugin: NSObject, FlutterPlugin, MtrackerHostApi {
+public class Ja0TrackerPlugin: NSObject, FlutterPlugin, Ja0TrackerHostApi {
 
-    private var flutterApi: MtrackerFlutterApi?
+    private var flutterApi: Ja0TrackerFlutterApi?
     private var callbacksWired = false
 
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let instance = MtrackerPlugin()
+        let instance = Ja0TrackerPlugin()
         let messenger = registrar.messenger()
 
-        MtrackerHostApiSetup.setUp(binaryMessenger: messenger, api: instance)
-        instance.flutterApi = MtrackerFlutterApi(binaryMessenger: messenger)
+        Ja0TrackerHostApiSetup.setUp(binaryMessenger: messenger, api: instance)
+        instance.flutterApi = Ja0TrackerFlutterApi(binaryMessenger: messenger)
 
         // Receive app lifecycle callbacks (Universal Links / custom-scheme opens) so we can
         // forward inbound URLs to the Core's handleDeepLink.
@@ -32,33 +32,33 @@ public class MtrackerPlugin: NSObject, FlutterPlugin, MtrackerHostApi {
         )
     }
 
-    // MARK: - MtrackerHostApi (Dart -> native): delegate to the Core
+    // MARK: - Ja0TrackerHostApi (Dart -> native): delegate to the Core
 
     func initialize(config: ConfigMessage) throws {
         // sdkKey / sdkSecret / appId are all required by the Core (contract §5).
         guard let sdkSecret = config.sdkSecret, let appId = config.appId else { return }
-        let core = MTrackerConfig(
+        let core = Ja0TrackerConfig(
             sdkKey: config.sdkKey,
             sdkSecret: sdkSecret,
             appId: appId,
             logLevel: Self.parseLogLevel(config.logLevel),
             waitForConsent: config.waitForConsent ?? true,
-            ingestBaseURL: config.ingestBaseUrl ?? MTrackerConfig.defaultIngestBaseURL,
-            clickdBaseURL: config.clickdBaseUrl ?? MTrackerConfig.defaultClickdBaseURL
+            ingestBaseURL: config.ingestBaseUrl ?? Ja0TrackerConfig.defaultIngestBaseURL,
+            clickdBaseURL: config.clickdBaseUrl ?? Ja0TrackerConfig.defaultClickdBaseURL
         )
-        MTracker.shared.initialize(core)
+        Ja0Tracker.shared.initialize(core)
         wireCallbacksOnce()
     }
 
     func requestTrackingConsent(completion: @escaping (Result<String, Error>) -> Void) {
         Task {
-            let status = await MTracker.shared.requestTrackingConsent()
+            let status = await Ja0Tracker.shared.requestTrackingConsent()
             completion(.success(Self.wire(status)))
         }
     }
 
     func setConsent(consent: ConsentMessage) throws {
-        MTracker.shared.setConsent(
+        Ja0Tracker.shared.setConsent(
             Consent(
                 analytics: consent.analytics,
                 attribution: consent.attribution,
@@ -72,12 +72,12 @@ public class MtrackerPlugin: NSObject, FlutterPlugin, MtrackerHostApi {
         for (k, v) in params {
             if let key = k, let value = v { cleaned[key] = value }
         }
-        MTracker.shared.trackEvent(name, cleaned)
+        Ja0Tracker.shared.trackEvent(name, cleaned)
     }
 
     func loadAd(slotId: String, completion: @escaping (Result<NativeAdMessage?, Error>) -> Void) {
         Task {
-            let ad = await MTracker.shared.ads.load(slotId)
+            let ad = await Ja0Tracker.shared.ads.load(slotId)
             completion(.success(ad.map(Self.message(from:))))
         }
     }
@@ -85,15 +85,15 @@ public class MtrackerPlugin: NSObject, FlutterPlugin, MtrackerHostApi {
     // MARK: - App Ops (docs/appops-contract §5)
 
     func getConfigJson(key: String, completion: @escaping (Result<String?, Error>) -> Void) {
-        completion(.success(MTracker.shared.getConfigJSON(key)))
+        completion(.success(Ja0Tracker.shared.getConfigJSON(key)))
     }
 
     func setPushConsent(granted: Bool) throws {
-        MTracker.shared.setPushConsent(granted)
+        Ja0Tracker.shared.setPushConsent(granted)
     }
 
     func setPushToken(token: String) throws {
-        MTracker.shared.setPushToken(token)
+        Ja0Tracker.shared.setPushToken(token)
     }
 
     // MARK: - Native -> Dart callbacks
@@ -101,18 +101,18 @@ public class MtrackerPlugin: NSObject, FlutterPlugin, MtrackerHostApi {
     private func wireCallbacksOnce() {
         guard !callbacksWired else { return }
         callbacksWired = true
-        MTracker.shared.onAttribution { [weak self] data in
+        Ja0Tracker.shared.onAttribution { [weak self] data in
             self?.flutterApi?.onAttribution(data: Self.message(from: data)) { _ in }
         }
-        MTracker.shared.onDeepLink { [weak self] link in
+        Ja0Tracker.shared.onDeepLink { [weak self] link in
             self?.flutterApi?.onDeepLink(data: Self.message(from: link)) { _ in }
         }
         // App Ops: forward update/message to Dart. The Core hands a `markShown` completion for
         // messages; call it right after emitting (delivery == shown, from Flutter's POV).
-        MTracker.shared.onUpdateAvailable { [weak self] update in
+        Ja0Tracker.shared.onUpdateAvailable { [weak self] update in
             self?.flutterApi?.onUpdateAvailable(data: Self.message(from: update)) { _ in }
         }
-        MTracker.shared.onMessage { [weak self] msg, markShown in
+        Ja0Tracker.shared.onMessage { [weak self] msg, markShown in
             self?.flutterApi?.onMessage(data: Self.message(from: msg)) { _ in }
             markShown()
         }
@@ -126,7 +126,7 @@ public class MtrackerPlugin: NSObject, FlutterPlugin, MtrackerHostApi {
         restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
     ) -> Bool {
         if let url = userActivity.webpageURL {
-            MTracker.shared.handleDeepLink(url)
+            Ja0Tracker.shared.handleDeepLink(url)
         }
         return false
     }
@@ -136,7 +136,7 @@ public class MtrackerPlugin: NSObject, FlutterPlugin, MtrackerHostApi {
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
-        MTracker.shared.handleDeepLink(url)
+        Ja0Tracker.shared.handleDeepLink(url)
         return false
     }
 

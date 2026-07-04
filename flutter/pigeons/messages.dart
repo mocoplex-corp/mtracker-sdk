@@ -17,11 +17,11 @@ import 'package:pigeon/pigeon.dart';
     dartOut: 'lib/src/messages.g.dart',
     dartOptions: DartOptions(),
     kotlinOut:
-        'android/src/main/kotlin/io/mtracker/flutter/Messages.g.kt',
-    kotlinOptions: KotlinOptions(package: 'io.mtracker.flutter'),
+        'android/src/main/kotlin/io/ja0tracker/flutter/Messages.g.kt',
+    kotlinOptions: KotlinOptions(package: 'io.ja0tracker.flutter'),
     swiftOut: 'ios/Classes/Messages.g.swift',
     swiftOptions: SwiftOptions(),
-    dartPackageName: 'mtracker',
+    dartPackageName: 'ja0tracker',
   ),
 )
 
@@ -184,7 +184,7 @@ class AppMessageMessage {
 // ---- Host API: Dart -> native ----
 
 @HostApi()
-abstract class MtrackerHostApi {
+abstract class Ja0TrackerHostApi {
   void initialize(ConfigMessage config);
 
   @async
@@ -209,7 +209,7 @@ abstract class MtrackerHostApi {
 // ---- Flutter API: native -> Dart callbacks ----
 
 @FlutterApi()
-abstract class MtrackerFlutterApi {
+abstract class Ja0TrackerFlutterApi {
   void onAttribution(AttributionMessage data);
   void onDeepLink(DeepLinkMessage data);
   void onUpdateAvailable(UpdateMessage data);
