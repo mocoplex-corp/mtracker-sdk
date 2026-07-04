@@ -18,7 +18,7 @@ cores (`sdk/ios`, `sdk/android`).
 
 ```yaml
 dependencies:
-  mtracker:
+  ja0tracker:
     git: https://github.com/mocoplex/mtracker.git   # path: sdk/flutter
 ```
 
