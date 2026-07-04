@@ -282,16 +282,26 @@ class Ja0Tracker {
     try {
       final fm = FirebaseMessaging.instance;
       await setPushConsent(true);
+      // iOS returns a token only after notification permission is granted; request it
+      // up front so a token exists (Android grants silently — effectively a no-op there).
+      await fm.requestPermission();
       final token = await fm.getToken();
       if (token != null && token.isNotEmpty) {
         await setPushToken(token);
+        debugPrint('[ja0] push token auto-registered (len=${token.length})');
+      } else {
+        debugPrint('[ja0] push auto-register: FCM token is null — '
+            'iOS needs notification permission granted; Android needs google-services.json + valid FCM setup.');
       }
       fm.onTokenRefresh.listen((t) {
         setPushToken(t);
+        debugPrint('[ja0] push token refreshed');
       });
-    } catch (_) {
-      // Firebase not configured in the host app (or push unavailable) — skip silently;
-      // the host can still register manually via setPushToken().
+    } catch (e) {
+      // Firebase not configured in the host app (or push unavailable). The host can still
+      // register manually via setPushToken(); we log so this is diagnosable, not silent.
+      debugPrint('[ja0] push auto-register skipped: $e — '
+          'is Firebase.initializeApp() awaited BEFORE Ja0Tracker.initialize()?');
     }
   }
 

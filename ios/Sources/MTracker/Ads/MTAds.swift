@@ -32,6 +32,8 @@ public final class MTAds {
             "app_id": config.appId,
             "slot_id": slotId,
             "platform": "ios",
+            // Device language so the adserver can pick localized (house-ad) copy.
+            "lang": Locale.preferredLanguages.first ?? "en",
         ]
         guard let body = try? JSONSerialization.data(withJSONObject: requestBody) else {
             return nil
