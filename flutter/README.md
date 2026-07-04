@@ -26,7 +26,7 @@ dependencies:
 
 1. Provide the native cores so the plugin can resolve them:
    - **Android** — publish `sdk/android` to a Maven repo (coordinate
-     `io.mtracker:mtracker-android:1.0.0`) or `includeBuild("sdk/android")` in the monorepo.
+     `io.ja0tracker:ja0tracker-android:1.0.0`) or `includeBuild("sdk/android")` in the monorepo.
    - **iOS** — ship an `MTracker.podspec` (XCFramework/source) from `sdk/ios`, so
      `s.dependency 'MTracker'` in `ios/mtracker.podspec` resolves; then `cd ios && pod install`.
 2. `flutter pub get`, then `flutter run` — Flutter autolinks the plugin on both platforms.
@@ -88,7 +88,7 @@ Override via `MTrackerConfig(ingestBaseUrl: ..., clickdBaseUrl: ...)`.
 ## Client build / pre-release tasks
 
 - Provide the native cores so the plugin resolves them: publish the
-  `io.mtracker:mtracker-android` AAR from `sdk/android`, and ship an `MTracker.podspec`
+  `io.ja0tracker:ja0tracker-android` AAR from `sdk/android`, and ship an `MTracker.podspec`
   (XCFramework/source) from `sdk/ios` so `s.dependency 'MTracker'` resolves.
 - Host-app config: deep-link `<intent-filter>` for `go-mtracker.ja0.com` (Android) and
   `associated-domains` (`applinks:go-mtracker.ja0.com`) + `NSUserTrackingUsageDescription`

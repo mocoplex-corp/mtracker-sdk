@@ -24,7 +24,7 @@ google(); mavenCentral()   // 전이 의존성(androidx, play-review 등) 해석
 
 // app/build.gradle.kts
 dependencies {
-    implementation("io.mtracker:mtracker-android:1.0.0")
+    implementation("io.ja0tracker:ja0tracker-android:1.0.0")
 }
 ```
 
@@ -46,7 +46,7 @@ import { MTracker } from '@mocoplex-corp/mtracker-react-native';
 MTracker.initialize({ sdkKey: 'pk_...', sdkSecret: 'sk_...', appId: 'YOUR_APP_ID' });
 ```
 
-- Android 브리지는 Core AAR(`io.mtracker:mtracker-android:1.0.0`)에 의존 → 위 **Android Maven
+- Android 브리지는 Core AAR(`io.ja0tracker:ja0tracker-android:1.0.0`)에 의존 → 위 **Android Maven
   저장소도 함께 등록**하세요.
 - New Architecture(TurboModule/Fabric) 및 레거시 브리지 모두 지원.
 
@@ -112,7 +112,7 @@ Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_.
 
 | 플랫폼 | 방식 | 좌표 |
 |---|---|---|
-| Android | 정적 Maven (raw) | `io.mtracker:mtracker-android:1.0.0` |
+| Android | 정적 Maven (raw) | `io.ja0tracker:ja0tracker-android:1.0.0` |
 | React Native | tarball (raw) | `react-native/mocoplex-corp-mtracker-react-native-1.0.0.tgz` |
 | Flutter | git ref + path | `ref: v1.0.0`, `path: flutter` |
 | iOS | SPM (repo 루트 Package.swift) | `.package(url: …/mtracker-sdk.git, from: "1.0.0")` |

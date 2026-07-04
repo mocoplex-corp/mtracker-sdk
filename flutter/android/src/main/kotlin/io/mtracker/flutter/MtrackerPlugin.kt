@@ -5,14 +5,14 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
-import io.mtracker.sdk.AppMessage
-import io.mtracker.sdk.Consent
-import io.mtracker.sdk.LogLevel
-import io.mtracker.sdk.MTracker
-import io.mtracker.sdk.MTrackerConfig
-import io.mtracker.sdk.TrackingConsentStatus
-import io.mtracker.sdk.UpdateInfo
-import io.mtracker.sdk.ads.NativeAd
+import io.ja0tracker.sdk.AppMessage
+import io.ja0tracker.sdk.Consent
+import io.ja0tracker.sdk.LogLevel
+import io.ja0tracker.sdk.Ja0Tracker
+import io.ja0tracker.sdk.Ja0TrackerConfig
+import io.ja0tracker.sdk.TrackingConsentStatus
+import io.ja0tracker.sdk.UpdateInfo
+import io.ja0tracker.sdk.ads.NativeAd
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
  * mtracker Flutter plugin (Android).
  *
  * Implements the Pigeon [MtrackerHostApi] by DELEGATING to the shared Android Core
- * (`io.mtracker.sdk.MTracker`) — HMAC signing, the event queue, attribution, sessions and
+ * (`io.ja0tracker.sdk.Ja0Tracker`) — HMAC signing, the event queue, attribution, sessions and
  * ad rendering all live in the Core. Native -> Dart callbacks (`onAttribution` /
  * `onDeepLink`) are pushed through the generated [MtrackerFlutterApi]. Registers the
  * [MTNativeAdViewFactory] PlatformView for `MTNativeAd`.
@@ -42,7 +42,7 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
         flutterApi = MtrackerFlutterApi(messenger)
 
         // Register the native ad PlatformView (docs/ads.md §6). The factory wraps the Core's
-        // io.mtracker.sdk.ads.MTNativeAdView.
+        // io.ja0tracker.sdk.ads.MTNativeAdView.
         binding.platformViewRegistry.registerViewFactory(
             MTNativeAdViewFactory.VIEW_TYPE,
             MTNativeAdViewFactory(),
@@ -63,23 +63,23 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
         // is missing rather than letting the Core throw on its require(...) guards.
         val sdkSecret = config.sdkSecret ?: return
         val appId = config.appId ?: return
-        val core = MTrackerConfig(
+        val core = Ja0TrackerConfig(
             sdkKey = config.sdkKey,
             sdkSecret = sdkSecret,
             appId = appId,
             logLevel = parseLogLevel(config.logLevel),
             waitForConsent = config.waitForConsent ?: true,
-            ingestBaseUrl = config.ingestBaseUrl ?: MTrackerConfig.DEFAULT_INGEST_BASE_URL,
-            clickdBaseUrl = config.clickdBaseUrl ?: MTrackerConfig.DEFAULT_CLICKD_BASE_URL,
+            ingestBaseUrl = config.ingestBaseUrl ?: Ja0TrackerConfig.DEFAULT_INGEST_BASE_URL,
+            clickdBaseUrl = config.clickdBaseUrl ?: Ja0TrackerConfig.DEFAULT_CLICKD_BASE_URL,
         )
-        MTracker.initialize(context, core)
+        Ja0Tracker.initialize(context, core)
         wireCallbacksOnce()
     }
 
     override fun requestTrackingConsent(callback: (Result<String>) -> Unit) {
         scope.launch {
             try {
-                val status = MTracker.requestTrackingConsent()
+                val status = Ja0Tracker.requestTrackingConsent()
                 callback(Result.success(status.toWire()))
             } catch (t: Throwable) {
                 callback(Result.success(TrackingConsentStatus.NOT_DETERMINED.toWire()))
@@ -88,7 +88,7 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
     }
 
     override fun setConsent(consent: ConsentMessage) {
-        MTracker.setConsent(
+        Ja0Tracker.setConsent(
             Consent(
                 analytics = consent.analytics,
                 attribution = consent.attribution,
@@ -99,13 +99,13 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
 
     override fun trackEvent(name: String, params: Map<String?, Any?>) {
         @Suppress("UNCHECKED_CAST")
-        MTracker.trackEvent(name, params.filterKeys { it != null } as Map<String, Any?>)
+        Ja0Tracker.trackEvent(name, params.filterKeys { it != null } as Map<String, Any?>)
     }
 
     override fun loadAd(slotId: String, callback: (Result<NativeAdMessage?>) -> Unit) {
         scope.launch {
             try {
-                val ad = MTracker.ads.load(slotId)
+                val ad = Ja0Tracker.ads.load(slotId)
                 callback(Result.success(ad?.toMessage()))
             } catch (t: Throwable) {
                 callback(Result.success(null)) // no-fill on error
@@ -116,15 +116,15 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
     // ---- App Ops (docs/appops-contract.md §5) ----
 
     override fun getConfigJson(key: String, callback: (Result<String?>) -> Unit) {
-        callback(Result.success(MTracker.getConfigJson(key)))
+        callback(Result.success(Ja0Tracker.getConfigJson(key)))
     }
 
     override fun setPushConsent(granted: Boolean) {
-        MTracker.setPushConsent(granted)
+        Ja0Tracker.setPushConsent(granted)
     }
 
     override fun setPushToken(token: String) {
-        MTracker.setPushToken(token)
+        Ja0Tracker.setPushToken(token)
     }
 
     // ---- Native -> Dart callbacks ----
@@ -132,12 +132,12 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
     private fun wireCallbacksOnce() {
         if (callbacksWired) return
         callbacksWired = true
-        MTracker.onAttribution { data -> flutterApi?.onAttribution(data.toMessage()) {} }
-        MTracker.onDeepLink { link -> flutterApi?.onDeepLink(link.toMessage()) {} }
+        Ja0Tracker.onAttribution { data -> flutterApi?.onAttribution(data.toMessage()) {} }
+        Ja0Tracker.onDeepLink { link -> flutterApi?.onDeepLink(link.toMessage()) {} }
         // App Ops: forward update/message to Dart. The Core hands a `markShown` completion for
         // messages; call it right after emitting (delivery == shown, from Flutter's POV).
-        MTracker.onUpdateAvailable { update -> flutterApi?.onUpdateAvailable(update.toMessage()) {} }
-        MTracker.onMessage { msg, markShown ->
+        Ja0Tracker.onUpdateAvailable { update -> flutterApi?.onUpdateAvailable(update.toMessage()) {} }
+        Ja0Tracker.onMessage { msg, markShown ->
             flutterApi?.onMessage(msg.toMessage()) {}
             markShown()
         }
@@ -146,7 +146,7 @@ class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
     // ActivityAware: the host Activity is where inbound deep-link intents arrive; forward
     // them to the Core so live/deferred links are delivered.
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-        // TODO(host): to route live App Links, call MTracker.handleDeepLink(intent) from the
+        // TODO(host): to route live App Links, call Ja0Tracker.handleDeepLink(intent) from the
         // Activity's onNewIntent. The plugin cannot intercept that without an intent listener
         // wired by the host; documented in android/README.md.
     }
@@ -173,7 +173,7 @@ private fun TrackingConsentStatus.toWire(): String = when (this) {
     TrackingConsentStatus.NOT_DETERMINED -> "notDetermined"
 }
 
-private fun io.mtracker.sdk.AttributionData.toMessage(): AttributionMessage = AttributionMessage(
+private fun io.ja0tracker.sdk.AttributionData.toMessage(): AttributionMessage = AttributionMessage(
     source = source,
     campaign = campaign,
     network = network,
@@ -185,7 +185,7 @@ private fun io.mtracker.sdk.AttributionData.toMessage(): AttributionMessage = At
     raw = raw.toNullableMap(),
 )
 
-private fun io.mtracker.sdk.DeepLinkData.toMessage(): DeepLinkMessage = DeepLinkMessage(
+private fun io.ja0tracker.sdk.DeepLinkData.toMessage(): DeepLinkMessage = DeepLinkMessage(
     path = path,
     params = params.toNullableMap(),
     url = url,

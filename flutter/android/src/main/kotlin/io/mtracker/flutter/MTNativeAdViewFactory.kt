@@ -5,8 +5,8 @@ import android.view.View
 import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
-import io.mtracker.sdk.MTracker
-import io.mtracker.sdk.ads.MTNativeAdView
+import io.ja0tracker.sdk.Ja0Tracker
+import io.ja0tracker.sdk.ads.MTNativeAdView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 /**
  * PlatformViewFactory for the `MTNativeAd` Flutter widget. Registered under
  * [VIEW_TYPE] (matching `_viewType` in lib/mtracker.dart). Each view wraps the Core's
- * [io.mtracker.sdk.ads.MTNativeAdView] — the Core owns rendering + impression/click
+ * [io.ja0tracker.sdk.ads.MTNativeAdView] — the Core owns rendering + impression/click
  * beacons (docs/ads.md §6); this factory only requests the ad and hosts the Core view.
  */
 class MTNativeAdViewFactory :
@@ -44,7 +44,7 @@ private class MTNativeAdPlatformView(
     init {
         if (!slotId.isNullOrEmpty()) {
             scope.launch {
-                val ad = MTracker.ads.load(slotId)
+                val ad = Ja0Tracker.ads.load(slotId)
                 if (ad != null) adView.bind(ad)
             }
         }

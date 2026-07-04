@@ -7,11 +7,11 @@
   <!-- that they should prefer consuming it instead. -->
   <!-- do_not_remove: published-with-gradle-metadata -->
   <modelVersion>4.0.0</modelVersion>
-  <groupId>io.mtracker</groupId>
-  <artifactId>mtracker-android</artifactId>
+  <groupId>io.ja0tracker</groupId>
+  <artifactId>ja0tracker-android</artifactId>
   <version>1.0.0</version>
   <packaging>aar</packaging>
-  <name>mtracker Android SDK</name>
+  <name>ja0tracker Android SDK</name>
   <description>Mobile attribution + native ads SDK for Android.</description>
   <url>https://github.com/mocoplex-corp/mtracker</url>
   <licenses>

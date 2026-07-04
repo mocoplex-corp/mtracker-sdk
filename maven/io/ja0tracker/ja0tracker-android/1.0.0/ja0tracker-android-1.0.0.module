@@ -1,8 +1,8 @@
 {
   "formatVersion": "1.1",
   "component": {
-    "group": "io.mtracker",
-    "module": "mtracker-android",
+    "group": "io.ja0tracker",
+    "module": "ja0tracker-android",
     "version": "1.0.0",
     "attributes": {
       "org.gradle.status": "release"
@@ -33,13 +33,13 @@
       ],
       "files": [
         {
-          "name": "mtracker-android-1.0.0.aar",
-          "url": "mtracker-android-1.0.0.aar",
-          "size": 199785,
-          "sha512": "478a197697c9daf1ab8b2c8c8a6da0719886ab53e28bf663406e2b25727158bec4f6332f62d6ba23e1875ac8af0a9359e2b39376af589d1d0748468f369a572b",
-          "sha256": "57704f6d13e92ffcb2c3bbaa8679c28fde16ad7b9929141782d6633c807bee67",
-          "sha1": "88699c2d4c805e1839fe6634d1a7e6176965cf07",
-          "md5": "07519551a16c109d38688efdc4e2590d"
+          "name": "ja0tracker-android-1.0.0.aar",
+          "url": "ja0tracker-android-1.0.0.aar",
+          "size": 200270,
+          "sha512": "2f3bdcffa7a2bef26022144b10d3cc646f8335dd401e26adf1827dcb0a7690408dbede979a149274dc443df3413b51597555285aac432f36bc92946cca82bcf5",
+          "sha256": "d950b2f9c8d117363e37a98c2150b22ad4b6cb76a7dca1d13203f6b0f7ba36a6",
+          "sha1": "c2cc11453fc3c184ca55a30b0941898e03529939",
+          "md5": "ad6de4f2a26b739d724ed3c7896dc78c"
         }
       ]
     },
@@ -111,13 +111,13 @@
       ],
       "files": [
         {
-          "name": "mtracker-android-1.0.0.aar",
-          "url": "mtracker-android-1.0.0.aar",
-          "size": 199785,
-          "sha512": "478a197697c9daf1ab8b2c8c8a6da0719886ab53e28bf663406e2b25727158bec4f6332f62d6ba23e1875ac8af0a9359e2b39376af589d1d0748468f369a572b",
-          "sha256": "57704f6d13e92ffcb2c3bbaa8679c28fde16ad7b9929141782d6633c807bee67",
-          "sha1": "88699c2d4c805e1839fe6634d1a7e6176965cf07",
-          "md5": "07519551a16c109d38688efdc4e2590d"
+          "name": "ja0tracker-android-1.0.0.aar",
+          "url": "ja0tracker-android-1.0.0.aar",
+          "size": 200270,
+          "sha512": "2f3bdcffa7a2bef26022144b10d3cc646f8335dd401e26adf1827dcb0a7690408dbede979a149274dc443df3413b51597555285aac432f36bc92946cca82bcf5",
+          "sha256": "d950b2f9c8d117363e37a98c2150b22ad4b6cb76a7dca1d13203f6b0f7ba36a6",
+          "sha1": "c2cc11453fc3c184ca55a30b0941898e03529939",
+          "md5": "ad6de4f2a26b739d724ed3c7896dc78c"
         }
       ]
     },
@@ -131,13 +131,13 @@
       },
       "files": [
         {
-          "name": "mtracker-android-1.0.0-sources.jar",
-          "url": "mtracker-android-1.0.0-sources.jar",
-          "size": 48734,
-          "sha512": "9f61f63ae0c6e21bf6e69991400935e3c500f612fc2f755dde0a81233befa6df08b8a5e273ef94c5f0e1858a0d814ac4a6f0451f2f3c6d23348c51de6cef71eb",
-          "sha256": "e98e74f2021be13e5ae7a8f2f6ee66e18700f10855b7c0b27e576cc0a2478ff8",
-          "sha1": "e8636f1aaf3cbe9892e0a7d9f7a1a67e1bedd019",
-          "md5": "89528d1cf78c71976ce0a40cbf0199c4"
+          "name": "ja0tracker-android-1.0.0-sources.jar",
+          "url": "ja0tracker-android-1.0.0-sources.jar",
+          "size": 48608,
+          "sha512": "57e1d447de0a0ab480d224722c7100f369307e15688bb6fe13484853aac9316e97fd9abbcf21b1c7aa5be8d54cda2416ff75478717b633a1e802f196e279391d",
+          "sha256": "4420b4d7ef7a6e72b9ef9444b8def0029045a30aaa77484155f45caba4c61f9e",
+          "sha1": "fb2f36d84170024e8827fe09214dfce9f3770044",
+          "md5": "724d928a4ce54c3b37d4c575baf5b41b"
         }
       ]
     }
