@@ -6,7 +6,7 @@
 - **무인증 공개 배포** — 별도 토큰/계정 없이 아래 좌표로 바로 받습니다.
 - 담긴 것: **Android AAR**(정적 Maven), **React Native 패키지**(tarball), **Flutter 플러그인**,
   **iOS**(Swift Package / CocoaPods 소스).
-- 현재 최신 **v1.0.1** (React Native만 v1.0.0 유지).
+- 현재 최신 **v1.0.1** (네 플랫폼 lockstep).
 
 > **버전 정책 — 아래 설치 예시는 항상 최신(main)을 가져오도록 되어 있습니다.**
 > - **최신 자동**: `main` 브랜치 / `latest.release` 를 그대로 쓰면 새 릴리스가 자동 반영됩니다.
@@ -50,7 +50,7 @@ configurations.all {
 레지스트리 없이 tarball URL로 설치합니다(무인증).
 
 ```bash
-npm install https://raw.githubusercontent.com/mocoplex-corp/mtracker-sdk/main/react-native/mocoplex-corp-ja0tracker-react-native-1.0.0.tgz
+npm install https://raw.githubusercontent.com/mocoplex-corp/mtracker-sdk/main/react-native/mocoplex-corp-ja0tracker-react-native-1.0.1.tgz
 cd ios && pod install   # iOS 네이티브는 별도(아래 iOS 참고)
 ```
 
@@ -126,7 +126,7 @@ Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_.
 | 플랫폼 | 방식 | 좌표 |
 |---|---|---|
 | Android | 정적 Maven (raw) | `...:latest.release` (main) · 고정 `:1.0.1` |
-| React Native | tarball (raw) | `react-native/mocoplex-corp-ja0tracker-react-native-1.0.0.tgz` |
+| React Native | tarball (raw) | `react-native/mocoplex-corp-ja0tracker-react-native-1.0.1.tgz` |
 | Flutter | git ref + path | `ref: main` (최신) · 고정 `v1.0.1`, `path: flutter` |
 | iOS | SPM (repo 루트 Package.swift) | `branch: "main"` (최신) · 고정 `from: "1.0.1")` |
 | iOS | CocoaPods (소스 pod) | `:branch => 'main'` (최신) · 고정 `:tag => 'v1.0.1'` |

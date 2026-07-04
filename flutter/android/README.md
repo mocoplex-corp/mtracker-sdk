@@ -28,7 +28,7 @@ registered once against the Core and relayed via `Ja0TrackerFlutterApi`.
 ## Client build steps
 
 1. Publish `sdk/android` to a Maven repo the app resolves, or `includeBuild("sdk/android")`
-   in the monorepo (the coordinate is `io.ja0tracker:ja0tracker-android:1.0.0`).
+   in the monorepo (the coordinate is `io.ja0tracker:ja0tracker-android:1.0.1`).
 2. `flutter pub get && flutter run` — Flutter autolinks the plugin.
 3. Add deep-link `<intent-filter>` for `go-mtracker.ja0.com` to the host app's launcher
    Activity (and call `Ja0Tracker.handleDeepLink(intent)` from `onNewIntent` for live links).

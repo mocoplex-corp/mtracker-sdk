@@ -26,7 +26,7 @@ dependencies:
 
 1. Provide the native cores so the plugin can resolve them:
    - **Android** — publish `sdk/android` to a Maven repo (coordinate
-     `io.ja0tracker:ja0tracker-android:1.0.0`) or `includeBuild("sdk/android")` in the monorepo.
+     `io.ja0tracker:ja0tracker-android:1.0.1`) or `includeBuild("sdk/android")` in the monorepo.
    - **iOS** — ship an `Ja0TrackerSDK.podspec` (XCFramework/source) from `sdk/ios`, so
      `s.dependency 'Ja0TrackerSDK'` in `ios/mtracker.podspec` resolves; then `cd ios && pod install`.
 2. `flutter pub get`, then `flutter run` — Flutter autolinks the plugin on both platforms.
