@@ -7,7 +7,7 @@ library mtracker;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -268,6 +268,7 @@ class Ja0Tracker {
         ingestBaseUrl: config.ingestBaseUrl,
         clickdBaseUrl: config.clickdBaseUrl,
       ));
+      _sdkKey = config.sdkKey;
       if (config.autoRegisterPush) {
         // Fire-and-forget: must never block or throw into initialize().
         unawaited(_autoRegisterPush());
@@ -313,6 +314,11 @@ class Ja0Tracker {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   bool _androidDisplayReady = false;
+
+  /// SDK public key (captured at initialize) for the unauthenticated push-click
+  /// beacon. The App Ops / api host the beacon is sent to.
+  String? _sdkKey;
+  static const String _apiBaseUrl = 'https://api-mtracker.ja0.com';
 
   /// Makes ja0-sent pushes visible while the app is in the foreground. iOS shows
   /// the banner natively via presentation options; Android has no such behavior
@@ -360,9 +366,34 @@ class Ja0Tracker {
         }
         // iOS: setForegroundNotificationPresentationOptions already shows it.
       });
+
+      // Report taps on ja0 pushes (background tap + cold-start tap) for the
+      // console's click report.
+      FirebaseMessaging.onMessageOpenedApp.listen(_reportPushClick);
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) _reportPushClick(initial);
     } catch (e) {
       debugPrint('[ja0] foreground push display setup skipped: $e');
     }
+  }
+
+  /// Reports a tap on a ja0-sent push (source=mtracker) to the console's click
+  /// report. Best-effort, unauthenticated beacon (a click count is low-stakes).
+  Future<void> _reportPushClick(RemoteMessage m) async {
+    try {
+      if (m.data['source'] != 'mtracker') return;
+      final campaignId = m.data['campaign_id'];
+      final key = _sdkKey;
+      if (campaignId == null || campaignId.isEmpty || key == null) return;
+      final client = HttpClient();
+      final req = await client.postUrl(Uri.parse('$_apiBaseUrl/v1/push/click'));
+      req.headers.contentType = ContentType.json;
+      req.add(utf8.encode(jsonEncode({'sdk_key': key, 'campaign_id': campaignId})));
+      final resp = await req.close();
+      await resp.drain<void>();
+      client.close();
+      debugPrint('[ja0] push click reported ($campaignId)');
+    } catch (_) {/* beacon is best-effort */}
   }
 
   /// iOS: triggers the ATT prompt. Android: resolves to [TrackingConsentStatus.granted].
