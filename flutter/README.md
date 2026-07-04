@@ -81,9 +81,13 @@ See `example/lib/main.dart` for a runnable-shaped minimal app.
 ## Backend endpoints
 
 - Ingest: `https://ingest-mtracker.ja0.com` (batch `POST /v1/events`, JSON + SDK key + HMAC)
+- App Ops — remote config / in-app messages / update prompts / push register:
+  `https://api-mtracker.ja0.com` (`GET /v1/appops`, `POST /v1/push/register`). Served by the
+  **api** service (not ingest); the native cores default to this host.
 - clickd / deep links: `https://go-mtracker.ja0.com`
 
-Override via `Ja0TrackerConfig(ingestBaseUrl: ..., clickdBaseUrl: ...)`.
+Override the ingest/clickd hosts via `Ja0TrackerConfig(ingestBaseUrl: ..., clickdBaseUrl: ...)`.
+The App Ops host defaults to the api service and normally needs no override.
 
 ## Client build / pre-release tasks
 
