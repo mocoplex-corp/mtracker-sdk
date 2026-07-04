@@ -2,8 +2,8 @@ name: ja0tracker
 description: >-
   mtracker Flutter SDK — mobile attribution, in-app events, deferred deep links, and
   native ad slots. Thin Pigeon/PlatformView wrapper over the native iOS/Android cores.
-version: 1.0.1
-homepage: https://github.com/mocoplex/mtracker
+version: 1.0.2
+homepage: https://github.com/mocoplex-corp/mtracker-sdk
 publish_to: none # TODO(release): publish to pub.dev once the native bridges are done.
 
 environment:
@@ -14,6 +14,8 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
+  # Auto-registers the app's FCM push token on init (Ja0TrackerConfig.autoRegisterPush).
+  firebase_messaging: '>=13.0.0'
 
 dev_dependencies:
   flutter_test:

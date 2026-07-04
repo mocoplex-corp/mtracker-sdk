@@ -5,8 +5,10 @@
 /// are defensively wrapped so SDK failures never crash the host app (docs/sdk.md §5).
 library mtracker;
 
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -26,6 +28,7 @@ class Ja0TrackerConfig {
     this.waitForConsent = true,
     this.ingestBaseUrl = defaultIngestBaseUrl,
     this.clickdBaseUrl = defaultClickdBaseUrl,
+    this.autoRegisterPush = true,
   });
 
   static const String defaultIngestBaseUrl = 'https://ingest-mtracker.ja0.com';
@@ -45,6 +48,13 @@ class Ja0TrackerConfig {
   final bool waitForConsent;
   final String ingestBaseUrl;
   final String clickdBaseUrl;
+
+  /// When true (default), the SDK auto-registers the app's FCM push token on init via
+  /// `firebase_messaging` — you do NOT need to call [Ja0Tracker.setPushToken] yourself.
+  /// Requires the host app to have Firebase set up (`Firebase.initializeApp()` before
+  /// `initialize`). It is a no-op if Firebase isn't configured. Set false to register
+  /// push manually (or to opt out of push entirely).
+  final bool autoRegisterPush;
 }
 
 class Consent {
@@ -256,8 +266,32 @@ class Ja0Tracker {
         ingestBaseUrl: config.ingestBaseUrl,
         clickdBaseUrl: config.clickdBaseUrl,
       ));
+      if (config.autoRegisterPush) {
+        // Fire-and-forget: must never block or throw into initialize().
+        unawaited(_autoRegisterPush());
+      }
     } catch (e, s) {
       _swallow(e, s);
+    }
+  }
+
+  /// Auto-registers the app's FCM/APNs push token so the console can send pushes
+  /// without any per-app push code. Uses the host app's Firebase Messaging; silently
+  /// skips if Firebase isn't set up. Re-registers on token refresh.
+  Future<void> _autoRegisterPush() async {
+    try {
+      final fm = FirebaseMessaging.instance;
+      await setPushConsent(true);
+      final token = await fm.getToken();
+      if (token != null && token.isNotEmpty) {
+        await setPushToken(token);
+      }
+      fm.onTokenRefresh.listen((t) {
+        setPushToken(t);
+      });
+    } catch (_) {
+      // Firebase not configured in the host app (or push unavailable) — skip silently;
+      // the host can still register manually via setPushToken().
     }
   }
 
