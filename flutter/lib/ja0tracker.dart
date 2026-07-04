@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -572,11 +573,34 @@ class Ja0Tracker {
 
   void _dispatchMessage(AppMessageMessage data) {
     final model = _mapMessage(data);
+    // Review prompts are handled natively by the SDK: trigger the OS in-app
+    // review (App Store / Play In-App Review) instead of forwarding to the host
+    // app, so a proper "leave a review" flow always shows (not just a dialog).
+    if (model.type == AppMessageType.review) {
+      unawaited(_requestReview(model));
+      return;
+    }
     final cb = _messageCallback;
     if (cb != null) {
       cb(model);
     } else {
       _pendingMessages.add(model);
+    }
+  }
+
+  /// Shows the native in-app review flow (App Store / Play In-App Review). Falls
+  /// back to opening the store listing when the in-app flow is unavailable
+  /// (quota, unsupported OS). Best-effort — never throws into the host app.
+  Future<void> _requestReview(AppMessage msg) async {
+    try {
+      final review = InAppReview.instance;
+      if (await review.isAvailable()) {
+        await review.requestReview();
+      } else if (msg.ctaUrl != null && msg.ctaUrl!.isNotEmpty) {
+        await review.openStoreListing();
+      }
+    } catch (e) {
+      debugPrint('[ja0] review request skipped: $e');
     }
   }
 
