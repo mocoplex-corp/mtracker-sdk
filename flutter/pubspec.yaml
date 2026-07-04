@@ -1,0 +1,34 @@
+name: mtracker
+description: >-
+  mtracker Flutter SDK — mobile attribution, in-app events, deferred deep links, and
+  native ad slots. Thin Pigeon/PlatformView wrapper over the native iOS/Android cores.
+version: 1.0.0
+homepage: https://github.com/mocoplex/mtracker
+publish_to: none # TODO(release): publish to pub.dev once the native bridges are done.
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Type-safe platform channels (docs/sdk.md §4 — Flutter uses Pigeon).
+  # Run `dart run pigeon --input pigeons/messages.dart` to regenerate messages.g.dart.
+  pigeon: ^21.0.0
+
+# Federated-ish single package: one plugin package implements both platforms by
+# bridging the shared native cores (docs/sdk.md §4).
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: io.mtracker.flutter
+        pluginClass: MtrackerPlugin
+      ios:
+        pluginClass: MtrackerPlugin

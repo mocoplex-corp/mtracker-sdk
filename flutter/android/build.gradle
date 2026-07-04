@@ -1,0 +1,62 @@
+// mtracker (Flutter) — Android plugin module.
+//
+// Thin Pigeon + PlatformView bridge that DELEGATES to the shared Android Core
+// (io.mtracker.sdk / the `mtracker-android` AAR). No Core logic is duplicated here.
+
+group 'io.mtracker.flutter'
+version '1.0.0'
+
+buildscript {
+    ext.kotlin_version = '1.9.24'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+    namespace 'io.mtracker.flutter'
+    compileSdk 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        minSdk 24
+    }
+}
+
+dependencies {
+    // The shared native Core. DELEGATE, never duplicate Core logic.
+    //   implementation 'io.mtracker:mtracker-android:1.0.0'
+    // In the monorepo you may substitute this with `includeBuild("sdk/android")`.
+    implementation 'io.mtracker:mtracker-android:1.0.0'
+
+    // Coroutines: MTracker.ads.load(slotId) is a `suspend fun`; the plugin bridges it to
+    // the async Pigeon callback.
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+}

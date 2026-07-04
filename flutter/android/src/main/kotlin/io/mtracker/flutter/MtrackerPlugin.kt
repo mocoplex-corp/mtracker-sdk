@@ -1,0 +1,236 @@
+package io.mtracker.flutter
+
+import android.content.Context
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.BinaryMessenger
+import io.mtracker.sdk.AppMessage
+import io.mtracker.sdk.Consent
+import io.mtracker.sdk.LogLevel
+import io.mtracker.sdk.MTracker
+import io.mtracker.sdk.MTrackerConfig
+import io.mtracker.sdk.TrackingConsentStatus
+import io.mtracker.sdk.UpdateInfo
+import io.mtracker.sdk.ads.NativeAd
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+/**
+ * mtracker Flutter plugin (Android).
+ *
+ * Implements the Pigeon [MtrackerHostApi] by DELEGATING to the shared Android Core
+ * (`io.mtracker.sdk.MTracker`) — HMAC signing, the event queue, attribution, sessions and
+ * ad rendering all live in the Core. Native -> Dart callbacks (`onAttribution` /
+ * `onDeepLink`) are pushed through the generated [MtrackerFlutterApi]. Registers the
+ * [MTNativeAdViewFactory] PlatformView for `MTNativeAd`.
+ */
+class MtrackerPlugin : FlutterPlugin, MtrackerHostApi, ActivityAware {
+
+    private var applicationContext: Context? = null
+    private var flutterApi: MtrackerFlutterApi? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var callbacksWired = false
+
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        applicationContext = binding.applicationContext
+        val messenger: BinaryMessenger = binding.binaryMessenger
+
+        MtrackerHostApi.setUp(messenger, this)
+        flutterApi = MtrackerFlutterApi(messenger)
+
+        // Register the native ad PlatformView (docs/ads.md §6). The factory wraps the Core's
+        // io.mtracker.sdk.ads.MTNativeAdView.
+        binding.platformViewRegistry.registerViewFactory(
+            MTNativeAdViewFactory.VIEW_TYPE,
+            MTNativeAdViewFactory(),
+        )
+    }
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        MtrackerHostApi.setUp(binding.binaryMessenger, null)
+        flutterApi = null
+        applicationContext = null
+    }
+
+    // ---- MtrackerHostApi (Dart -> native): delegate to the Core ----
+
+    override fun initialize(config: ConfigMessage) {
+        val context = applicationContext ?: return
+        // sdkKey / sdkSecret / appId are all required by the Core (contract §5); bail if any
+        // is missing rather than letting the Core throw on its require(...) guards.
+        val sdkSecret = config.sdkSecret ?: return
+        val appId = config.appId ?: return
+        val core = MTrackerConfig(
+            sdkKey = config.sdkKey,
+            sdkSecret = sdkSecret,
+            appId = appId,
+            logLevel = parseLogLevel(config.logLevel),
+            waitForConsent = config.waitForConsent ?: true,
+            ingestBaseUrl = config.ingestBaseUrl ?: MTrackerConfig.DEFAULT_INGEST_BASE_URL,
+            clickdBaseUrl = config.clickdBaseUrl ?: MTrackerConfig.DEFAULT_CLICKD_BASE_URL,
+        )
+        MTracker.initialize(context, core)
+        wireCallbacksOnce()
+    }
+
+    override fun requestTrackingConsent(callback: (Result<String>) -> Unit) {
+        scope.launch {
+            try {
+                val status = MTracker.requestTrackingConsent()
+                callback(Result.success(status.toWire()))
+            } catch (t: Throwable) {
+                callback(Result.success(TrackingConsentStatus.NOT_DETERMINED.toWire()))
+            }
+        }
+    }
+
+    override fun setConsent(consent: ConsentMessage) {
+        MTracker.setConsent(
+            Consent(
+                analytics = consent.analytics,
+                attribution = consent.attribution,
+                ads = consent.ads,
+            )
+        )
+    }
+
+    override fun trackEvent(name: String, params: Map<String?, Any?>) {
+        @Suppress("UNCHECKED_CAST")
+        MTracker.trackEvent(name, params.filterKeys { it != null } as Map<String, Any?>)
+    }
+
+    override fun loadAd(slotId: String, callback: (Result<NativeAdMessage?>) -> Unit) {
+        scope.launch {
+            try {
+                val ad = MTracker.ads.load(slotId)
+                callback(Result.success(ad?.toMessage()))
+            } catch (t: Throwable) {
+                callback(Result.success(null)) // no-fill on error
+            }
+        }
+    }
+
+    // ---- App Ops (docs/appops-contract.md §5) ----
+
+    override fun getConfigJson(key: String, callback: (Result<String?>) -> Unit) {
+        callback(Result.success(MTracker.getConfigJson(key)))
+    }
+
+    override fun setPushConsent(granted: Boolean) {
+        MTracker.setPushConsent(granted)
+    }
+
+    override fun setPushToken(token: String) {
+        MTracker.setPushToken(token)
+    }
+
+    // ---- Native -> Dart callbacks ----
+
+    private fun wireCallbacksOnce() {
+        if (callbacksWired) return
+        callbacksWired = true
+        MTracker.onAttribution { data -> flutterApi?.onAttribution(data.toMessage()) {} }
+        MTracker.onDeepLink { link -> flutterApi?.onDeepLink(link.toMessage()) {} }
+        // App Ops: forward update/message to Dart. The Core hands a `markShown` completion for
+        // messages; call it right after emitting (delivery == shown, from Flutter's POV).
+        MTracker.onUpdateAvailable { update -> flutterApi?.onUpdateAvailable(update.toMessage()) {} }
+        MTracker.onMessage { msg, markShown ->
+            flutterApi?.onMessage(msg.toMessage()) {}
+            markShown()
+        }
+    }
+
+    // ActivityAware: the host Activity is where inbound deep-link intents arrive; forward
+    // them to the Core so live/deferred links are delivered.
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        // TODO(host): to route live App Links, call MTracker.handleDeepLink(intent) from the
+        // Activity's onNewIntent. The plugin cannot intercept that without an intent listener
+        // wired by the host; documented in android/README.md.
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {}
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {}
+    override fun onDetachedFromActivity() {}
+
+    private fun parseLogLevel(value: String?): LogLevel = when (value) {
+        "none" -> LogLevel.NONE
+        "error" -> LogLevel.ERROR
+        "warn" -> LogLevel.WARN
+        "debug" -> LogLevel.DEBUG
+        else -> LogLevel.INFO
+    }
+}
+
+// ---- Core model -> Pigeon message mappers ----
+
+private fun TrackingConsentStatus.toWire(): String = when (this) {
+    TrackingConsentStatus.GRANTED -> "granted"
+    TrackingConsentStatus.DENIED -> "denied"
+    TrackingConsentStatus.RESTRICTED -> "restricted"
+    TrackingConsentStatus.NOT_DETERMINED -> "notDetermined"
+}
+
+private fun io.mtracker.sdk.AttributionData.toMessage(): AttributionMessage = AttributionMessage(
+    source = source,
+    campaign = campaign,
+    network = network,
+    clickId = clickId,
+    confidence = confidence.name.lowercase(),
+    confidenceScore = confidenceScore,
+    // Widen to the Pigeon message's nullable key/value map type (Map key type is invariant
+    // in Kotlin, so Map<String,String> is not assignable to Map<String?,String?> directly).
+    raw = raw.toNullableMap(),
+)
+
+private fun io.mtracker.sdk.DeepLinkData.toMessage(): DeepLinkMessage = DeepLinkMessage(
+    path = path,
+    params = params.toNullableMap(),
+    url = url,
+    isDeferred = isDeferred,
+)
+
+private fun Map<String, String>.toNullableMap(): Map<String?, String?> =
+    LinkedHashMap<String?, String?>(this)
+
+private fun UpdateInfo.toMessage(): UpdateMessage = UpdateMessage(
+    available = available,
+    force = force,
+    latestVersion = latestVersion,
+    storeUrl = storeUrl,
+    title = title,
+    body = body,
+)
+
+private fun AppMessage.toMessage(): AppMessageMessage = AppMessageMessage(
+    id = id,
+    type = type.name.lowercase(),
+    priority = priority.toLong(),
+    title = title,
+    body = body,
+    ctaText = ctaText,
+    ctaUrl = ctaUrl,
+    imageUrl = imageUrl,
+    force = force,
+    minSessionSec = minSessionSec.toLong(),
+    frequency = frequency.name.lowercase(),
+)
+
+private fun NativeAd.toMessage(): NativeAdMessage = NativeAdMessage(
+    slotId = slotId,
+    adId = adId,
+    format = format,
+    headline = assets.headline,
+    body = assets.body,
+    advertiser = assets.advertiser,
+    cta = assets.cta,
+    iconUrl = assets.iconUrl,
+    media = assets.media?.let { NativeAdMediaMessage(type = it.type.name.lowercase(), url = it.url) },
+    rating = assets.rating,
+    impressionUrls = tracking.impressionUrls,
+    clickUrl = tracking.clickUrl,
+    viewablePixels = tracking.viewableThreshold.pixels,
+    viewableMs = tracking.viewableThreshold.ms,
+)
