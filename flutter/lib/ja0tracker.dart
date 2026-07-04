@@ -7,9 +7,11 @@ library mtracker;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -297,11 +299,69 @@ class Ja0Tracker {
         setPushToken(t);
         debugPrint('[ja0] push token refreshed');
       });
+      // Show ja0 pushes even while the app is in the foreground (the OS only
+      // auto-draws them in background/terminated state).
+      await _setupForegroundDisplay(fm);
     } catch (e) {
       // Firebase not configured in the host app (or push unavailable). The host can still
       // register manually via setPushToken(); we log so this is diagnosable, not silent.
       debugPrint('[ja0] push auto-register skipped: $e — '
           'is Firebase.initializeApp() awaited BEFORE Ja0Tracker.initialize()?');
+    }
+  }
+
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+  bool _androidDisplayReady = false;
+
+  /// Makes ja0-sent pushes visible while the app is in the foreground. iOS shows
+  /// the banner natively via presentation options; Android has no such behavior
+  /// for FCM notification messages, so we render a local notification. Only
+  /// messages tagged source=mtracker are drawn — the host app owns its own.
+  Future<void> _setupForegroundDisplay(FirebaseMessaging fm) async {
+    try {
+      await fm.setForegroundNotificationPresentationOptions(
+          alert: true, badge: true, sound: true);
+
+      if (Platform.isAndroid && !_androidDisplayReady) {
+        const channel = AndroidNotificationChannel(
+          'ja0_default',
+          'Notifications',
+          importance: Importance.high,
+        );
+        final android =
+            _localNotifications.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        await android?.createNotificationChannel(channel);
+        await _localNotifications.initialize(const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        ));
+        _androidDisplayReady = true;
+      }
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage m) {
+        if (m.data['source'] != 'mtracker') return; // host app owns its own pushes
+        final n = m.notification;
+        if (n == null) return;
+        if (Platform.isAndroid) {
+          _localNotifications.show(
+            n.hashCode,
+            n.title,
+            n.body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'ja0_default',
+                'Notifications',
+                importance: Importance.high,
+                priority: Priority.high,
+              ),
+            ),
+          );
+        }
+        // iOS: setForegroundNotificationPresentationOptions already shows it.
+      });
+    } catch (e) {
+      debugPrint('[ja0] foreground push display setup skipped: $e');
     }
   }
 
