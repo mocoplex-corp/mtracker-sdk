@@ -5,9 +5,9 @@
 # XCFramework at sdk/ios). DELEGATES to the Core; does not duplicate it.
 #
 Pod::Spec.new do |s|
-  s.name             = 'mtracker'
+  s.name             = 'ja0tracker'
   s.version          = '1.0.0'
-  s.summary          = 'mtracker Flutter SDK (iOS plugin) — thin wrapper over the Ja0TrackerSDK Core.'
+  s.summary          = 'ja0tracker Flutter SDK (iOS plugin) — thin wrapper over the Ja0TrackerSDK Core.'
   s.description      = <<-DESC
 Attribution, in-app events, deferred deep links, and native ad slots for Flutter. Wraps the
 native iOS Core (Ja0Tracker) via Pigeon + PlatformView.

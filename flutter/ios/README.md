@@ -6,7 +6,7 @@ duplicated.
 
 ## Files
 
-- `mtracker.podspec` — the plugin pod; `s.dependency 'Ja0Tracker'` pulls in the shared Core.
+- `ja0tracker.podspec` — the plugin pod; `s.dependency 'Ja0Tracker'` pulls in the shared Core.
 - `Classes/Ja0TrackerPlugin.swift` — `FlutterPlugin` implementing the Pigeon `Ja0TrackerHostApi`
   by delegating to `Ja0Tracker.shared` (`initialize`, `requestTrackingConsent`, `setConsent`,
   `trackEvent`, `loadAd`) and pushing `onAttribution`/`onDeepLink` back through the generated

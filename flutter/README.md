@@ -28,7 +28,7 @@ dependencies:
    - **Android** — publish `sdk/android` to a Maven repo (coordinate
      `io.ja0tracker:ja0tracker-android:1.0.3`) or `includeBuild("sdk/android")` in the monorepo.
    - **iOS** — ship an `Ja0TrackerSDK.podspec` (XCFramework/source) from `sdk/ios`, so
-     `s.dependency 'Ja0TrackerSDK'` in `ios/mtracker.podspec` resolves; then `cd ios && pod install`.
+     `s.dependency 'Ja0TrackerSDK'` in `ios/ja0tracker.podspec` resolves; then `cd ios && pod install`.
 2. `flutter pub get`, then `flutter run` — Flutter autolinks the plugin on both platforms.
 3. (Optional) regenerate the Pigeon code: `dart run pigeon --input pigeons/messages.dart`.
 
