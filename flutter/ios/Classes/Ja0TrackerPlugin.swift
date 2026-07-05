@@ -77,7 +77,7 @@ public class Ja0TrackerPlugin: NSObject, FlutterPlugin, Ja0TrackerHostApi {
 
     func loadAd(slotId: String, completion: @escaping (Result<NativeAdMessage?, Error>) -> Void) {
         Task {
-            let ad = await Ja0Tracker.shared.ads.load(slotId)
+            let ad = await Ja0Tracker.shared.ads.load(slotId: slotId)
             completion(.success(ad.map(Self.message(from:))))
         }
     }

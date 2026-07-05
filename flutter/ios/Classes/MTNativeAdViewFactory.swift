@@ -44,7 +44,7 @@ private class MTNativeAdPlatformView: NSObject, FlutterPlatformView {
         super.init()
         if let slotId, !slotId.isEmpty {
             Task { @MainActor in
-                if let ad = await Ja0Tracker.shared.ads.load(slotId) {
+                if let ad = await Ja0Tracker.shared.ads.load(slotId: slotId) {
                     // Core beacons fire regardless; forward the events to Dart (main thread).
                     self.adView.onImpression = { [weak self] in
                         self?.channel.invokeMethod("onAdImpression", arguments: ["adId": ad.adId])
