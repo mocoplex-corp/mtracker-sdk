@@ -14,7 +14,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'src/messages.g.dart';
 
@@ -31,11 +33,17 @@ class Ja0TrackerConfig {
     this.waitForConsent = true,
     this.ingestBaseUrl = defaultIngestBaseUrl,
     this.clickdBaseUrl = defaultClickdBaseUrl,
+    this.adBaseUrl = defaultAdBaseUrl,
+    this.appOpsBaseUrl = defaultAppOpsBaseUrl,
     this.autoRegisterPush = true,
+    this.enableDesktopAppOps = true,
+    this.appVersion,
   });
 
   static const String defaultIngestBaseUrl = 'https://ingest-mtracker.ja0.com';
   static const String defaultClickdBaseUrl = 'https://go-mtracker.ja0.com';
+  static const String defaultAdBaseUrl = 'https://ad-mtracker.ja0.com';
+  static const String defaultAppOpsBaseUrl = 'https://api-mtracker.ja0.com';
 
   /// Tenant SDK public key issued by the dashboard. Required (SDK contract §5).
   final String sdkKey;
@@ -51,6 +59,24 @@ class Ja0TrackerConfig {
   final bool waitForConsent;
   final String ingestBaseUrl;
   final String clickdBaseUrl;
+
+  /// Native ad request base host (adserver): `POST {adBaseUrl}/v1/ad`. Used by the
+  /// pure-Dart desktop (Windows/macOS/Linux) ad path — mobile uses the native core.
+  final String adBaseUrl;
+
+  /// App Ops delivery host (api): `GET {appOpsBaseUrl}/v1/appops`. On desktop the
+  /// SDK polls this itself (there is no native core) to draw update/review prompts.
+  final String appOpsBaseUrl;
+
+  /// Desktop only (no-op on mobile, where the native core owns App Ops). When true
+  /// (default) the SDK fetches App Ops on init and draws the update prompt + review
+  /// request itself. Requires [Ja0Tracker.navigatorKey] to be attached to the app's
+  /// `MaterialApp(navigatorKey: ...)` so the SDK has a context to show dialogs.
+  final bool enableDesktopAppOps;
+
+  /// Optional app version (e.g. "1.2.0") reported to App Ops for the update check.
+  /// When null the SDK reads it from the platform via `package_info_plus`.
+  final String? appVersion;
 
   /// When true (default), the SDK auto-registers the app's FCM push token on init via
   /// `firebase_messaging` — you do NOT need to call [Ja0Tracker.setPushToken] yourself.
@@ -216,11 +242,19 @@ typedef MessageCallback = void Function(AppMessage data);
 
 /// Ads accessor, reached via `Ja0Tracker.instance.ads` (docs/ads.md).
 class MTAds {
-  MTAds._(this._host);
+  MTAds._(this._host, this._owner);
   final Ja0TrackerHostApi _host;
+  final Ja0Tracker _owner;
 
   /// Load a native ad by slot ID. Resolves null on no-fill (docs/ads.md §3, §4).
+  ///
+  /// On desktop (Windows/macOS/Linux) there is no native ad core, so the ad is
+  /// fetched directly from the adserver over HTTP (pure Dart); a click lands on
+  /// the house campaign's web URL via clickd.
   Future<NativeAd?> load(String slotId) async {
+    if (_owner._isDesktop) {
+      return _owner._loadAdOverHttp(slotId);
+    }
     try {
       final msg = await _host.loadAd(slotId);
       if (msg == null) return null;
@@ -239,13 +273,26 @@ class Ja0Tracker {
     // `onAttribution(cb)` / `onDeepLink(cb)` registration API, so the interface is
     // implemented by a separate [_FlutterApiHandler] that forwards into this facade.
     Ja0TrackerFlutterApi.setUp(_FlutterApiHandler(this));
-    ads = MTAds._(_host);
+    ads = MTAds._(_host, this);
   }
 
   static final Ja0Tracker instance = Ja0Tracker._();
 
+  /// Attach this to your `MaterialApp(navigatorKey: Ja0Tracker.navigatorKey)` so
+  /// the SDK can draw its own dialogs (desktop update prompt / review request)
+  /// without host UI code. Optional — when absent the SDK forwards to the
+  /// [onUpdateAvailable] / [onMessage] callbacks instead.
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   final Ja0TrackerHostApi _host = Ja0TrackerHostApi();
   late final MTAds ads;
+
+  /// True on desktop (Flutter Windows/macOS/Linux), where there is no native core
+  /// and ads / App Ops run in pure Dart. Web is not supported (this SDK uses
+  /// dart:io); it reports false there.
+  bool get _isDesktop =>
+      !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
 
   AttributionCallback? _attributionCallback;
   DeepLinkCallback? _deepLinkCallback;
@@ -259,6 +306,14 @@ class Ja0Tracker {
 
   /// Initialize once at app start.
   Future<void> initialize(Ja0TrackerConfig config) async {
+    // Capture config up front so the pure-Dart desktop paths (ads / App Ops) keep
+    // working even when the native bridge is unavailable — on desktop there is no
+    // native core, so _host.initialize below throws MissingPluginException.
+    _sdkKey = config.sdkKey;
+    _appId = config.appId;
+    _adBaseUrl = config.adBaseUrl;
+    _appOpsBaseUrl = config.appOpsBaseUrl;
+    _configAppVersion = config.appVersion;
     try {
       await _host.initialize(ConfigMessage(
         sdkKey: config.sdkKey,
@@ -269,13 +324,17 @@ class Ja0Tracker {
         ingestBaseUrl: config.ingestBaseUrl,
         clickdBaseUrl: config.clickdBaseUrl,
       ));
-      _sdkKey = config.sdkKey;
       if (config.autoRegisterPush) {
         // Fire-and-forget: must never block or throw into initialize().
         unawaited(_autoRegisterPush());
       }
     } catch (e, s) {
       _swallow(e, s);
+    }
+    // Desktop (Windows/macOS/Linux): no native core, so poll App Ops and draw the
+    // update prompt + review request ourselves in pure Dart.
+    if (_isDesktop && config.enableDesktopAppOps) {
+      unawaited(_runDesktopAppOps());
     }
   }
 
@@ -320,6 +379,12 @@ class Ja0Tracker {
   /// beacon. The App Ops / api host the beacon is sent to.
   String? _sdkKey;
   static const String _apiBaseUrl = 'https://api-mtracker.ja0.com';
+
+  /// Config captured at initialize for the pure-Dart desktop paths.
+  String? _appId;
+  String _adBaseUrl = Ja0TrackerConfig.defaultAdBaseUrl;
+  String _appOpsBaseUrl = Ja0TrackerConfig.defaultAppOpsBaseUrl;
+  String? _configAppVersion;
 
   /// Makes ja0-sent pushes visible while the app is in the foreground. iOS shows
   /// the banner natively via presentation options; Android has no such behavior
@@ -604,6 +669,341 @@ class Ja0Tracker {
     }
   }
 
+  // ==========================================================================
+  // Desktop (Windows/macOS/Linux) pure-Dart paths. There is no native core on
+  // desktop, so ads, the app-update prompt and the review request are all
+  // implemented here in Dart. Nothing below runs on mobile (guarded by
+  // [_isDesktop]).
+  // ==========================================================================
+
+  /// Fetches App Ops on desktop and draws the update prompt + review request
+  /// itself (announcements/custom go to the host [onMessage] handler).
+  Future<void> _runDesktopAppOps() async {
+    try {
+      final appId = _appId;
+      if (appId == null || appId.isEmpty) return;
+      final version = await _resolveAppVersion();
+      final uri = Uri.parse('$_appOpsBaseUrl/v1/appops').replace(queryParameters: {
+        'app_id': appId,
+        'platform': _desktopPlatformName(),
+        'lang': _deviceLang(),
+        if (version != null && version.isNotEmpty) 'app_version': version,
+      });
+      final data = await _httpGetJson(uri);
+      if (data == null) return;
+
+      // New version released → draw the update dialog (CTA opens the download URL).
+      final upd = data['update'];
+      if (upd is Map && upd['available'] == true) {
+        await _showDesktopUpdateDialog(
+          title: upd['title'] as String?,
+          body: upd['body'] as String?,
+          ctaText: upd['cta_text'] as String?,
+          storeUrl: upd['store_url'] as String?,
+          force: upd['force'] == true,
+        );
+      }
+
+      final msgs = data['messages'];
+      if (msgs is List) {
+        for (final m in msgs) {
+          if (m is! Map) continue;
+          final type = m['type'] as String?;
+          if (type == 'review') {
+            await _showDesktopReviewDialog(
+              title: m['title'] as String?,
+              body: m['body'] as String?,
+              ctaText: m['cta_text'] as String?,
+              ctaUrl: m['cta_url'] as String?,
+            );
+          } else {
+            // announcement / custom: hand to the host's onMessage handler.
+            final model = AppMessage(
+              id: (m['id'] as String?) ?? '',
+              type: _parseMessageType(type ?? 'announcement'),
+              priority: (m['priority'] as num?)?.toInt() ?? 0,
+              title: m['title'] as String?,
+              body: m['body'] as String?,
+              ctaText: m['cta_text'] as String?,
+              ctaUrl: m['cta_url'] as String?,
+              imageUrl: m['image_url'] as String?,
+              force: m['force'] == true,
+              minSessionSec: (m['min_session_sec'] as num?)?.toInt() ?? 0,
+              frequency: _parseFrequency((m['frequency'] as String?) ?? 'always'),
+            );
+            final cb = _messageCallback;
+            if (cb != null) {
+              cb(model);
+            } else {
+              _pendingMessages.add(model);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[ja0] desktop app-ops skipped: $e');
+    }
+  }
+
+  /// Requests an ad from the adserver over HTTP (desktop). Returns null on no-fill.
+  Future<NativeAd?> _loadAdOverHttp(String slotId) async {
+    final appId = _appId;
+    if (appId == null || appId.isEmpty) return null;
+    final data = await _httpPostJson(Uri.parse('$_adBaseUrl/v1/ad'), {
+      'slot_key': slotId,
+      'slot_id': slotId, // the adserver resolves a non-UUID slot_id as a slot key
+      'app_id': appId,
+      'user': _adUser(),
+      'platform': _desktopPlatformName(),
+      'lang': _deviceLang(),
+    });
+    if (data == null) return null;
+    return _adFromJson(slotId, data);
+  }
+
+  /// Parses an adserver /v1/ad response into a [NativeAd].
+  NativeAd? _adFromJson(String slotId, Map<String, dynamic> m) {
+    try {
+      final assets = (m['assets'] as Map?)?.cast<String, dynamic>() ?? const {};
+      final tracking = (m['tracking'] as Map?)?.cast<String, dynamic>() ?? const {};
+      NativeAdMedia? media;
+      final mediaRaw = assets['media'];
+      if (mediaRaw is Map) {
+        final url = mediaRaw['url'] as String?;
+        if (url != null && url.isNotEmpty) {
+          media = NativeAdMedia(
+            type: mediaRaw['type'] == 'video'
+                ? NativeAdMediaType.video
+                : NativeAdMediaType.image,
+            url: url,
+          );
+        }
+      }
+      final vt = (tracking['viewableThreshold'] as Map?)?.cast<String, dynamic>();
+      return NativeAd(
+        slotId: (m['slotId'] as String?) ?? slotId,
+        adId: (m['adId'] as String?) ?? '',
+        format: (m['format'] as String?) ?? 'native',
+        headline: assets['headline'] as String?,
+        body: assets['body'] as String?,
+        advertiser: assets['advertiser'] as String?,
+        cta: assets['cta'] as String?,
+        iconUrl: assets['icon'] as String?,
+        media: media,
+        rating: (assets['rating'] as num?)?.toDouble(),
+        impressionUrls: <String>[
+          for (final u in (tracking['impression'] as List? ?? const []))
+            if (u is String) u,
+        ],
+        clickUrl: (tracking['click'] as String?) ?? '',
+        viewablePixels: (vt?['pixels'] as num?)?.toDouble() ?? 0.5,
+        viewableMs: (vt?['ms'] as num?)?.toInt() ?? 1000,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fires the viewability-gated impression beacons for a desktop-rendered ad.
+  void _fireImpressions(NativeAd ad) {
+    for (final u in ad.impressionUrls) {
+      if (u.isNotEmpty) unawaited(_fireBeacon(u));
+    }
+  }
+
+  /// Opens an external URL (ad landing / update download / review page) in the
+  /// system browser. Best-effort — never throws into the host app.
+  Future<void> _openUrl(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('[ja0] open url failed: $e');
+    }
+  }
+
+  // ---- desktop dialogs (drawn by the SDK via [navigatorKey]) ----
+
+  Future<void> _showDesktopUpdateDialog({
+    String? title,
+    String? body,
+    String? ctaText,
+    String? storeUrl,
+    bool force = false,
+  }) async {
+    // A host override (onUpdateAvailable) takes precedence — it draws its own UI.
+    final cb = _updateCallback;
+    if (cb != null) {
+      cb(UpdateInfo(
+          available: true, force: force, storeUrl: storeUrl, title: title, body: body));
+      return;
+    }
+    final ctx = await _awaitNavigatorContext();
+    if (ctx == null) return;
+    final isKo = _deviceLang() == 'ko';
+    await showDialog<void>(
+      context: ctx,
+      barrierDismissible: !force,
+      builder: (dc) => PopScope(
+        canPop: !force,
+        child: AlertDialog(
+          title: Text(title ?? (isKo ? '업데이트 안내' : 'Update Available')),
+          content: Text(body ??
+              (isKo
+                  ? '새로운 버전이 출시되었습니다. 지금 업데이트해 주세요.'
+                  : 'A new version is available. Please update now.')),
+          actions: [
+            if (!force)
+              TextButton(
+                onPressed: () => Navigator.of(dc).pop(),
+                child: Text(isKo ? '나중에' : 'Later'),
+              ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dc).pop();
+                if (storeUrl != null && storeUrl.isNotEmpty) _openUrl(storeUrl);
+              },
+              child: Text(ctaText ?? (isKo ? '업데이트' : 'Update')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDesktopReviewDialog({
+    String? title,
+    String? body,
+    String? ctaText,
+    String? ctaUrl,
+  }) async {
+    final ctx = await _awaitNavigatorContext();
+    if (ctx == null) return;
+    final isKo = _deviceLang() == 'ko';
+    await showDialog<void>(
+      context: ctx,
+      builder: (dc) => AlertDialog(
+        title: Text(title ?? (isKo ? '리뷰를 남겨주세요' : 'Enjoying the app?')),
+        content: Text(body ??
+            (isKo
+                ? '앱이 마음에 드셨다면 리뷰를 남겨주세요. 큰 힘이 됩니다.'
+                : 'If you like the app, please leave us a review.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dc).pop(),
+            child: Text(isKo ? '닫기' : 'Not now'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dc).pop();
+              if (ctaUrl != null && ctaUrl.isNotEmpty) _openUrl(ctaUrl);
+            },
+            child: Text(ctaText ?? (isKo ? '리뷰 남기기' : 'Leave a review')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Waits (up to ~10s) for the app's navigator to mount so the SDK can show a
+  /// dialog right after startup. Returns null if [navigatorKey] was never attached.
+  Future<BuildContext?> _awaitNavigatorContext() async {
+    for (var i = 0; i < 20; i++) {
+      final ctx = navigatorKey.currentContext;
+      if (ctx != null) return ctx;
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    debugPrint('[ja0] navigatorKey not attached — '
+        'pass MaterialApp(navigatorKey: Ja0Tracker.navigatorKey) to show SDK dialogs.');
+    return null;
+  }
+
+  // ---- desktop helpers (HTTP / platform) ----
+
+  String? _adUserId;
+  String _adUser() =>
+      _adUserId ??= 'desktop-${DateTime.now().microsecondsSinceEpoch}';
+
+  Future<String?> _resolveAppVersion() async {
+    final override = _configAppVersion;
+    if (override != null && override.isNotEmpty) return override;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      return info.version;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _desktopPlatformName() {
+    if (Platform.isWindows) return 'windows';
+    if (Platform.isMacOS) return 'macos';
+    if (Platform.isLinux) return 'linux';
+    return 'web';
+  }
+
+  String _deviceLang() {
+    try {
+      return Platform.localeName.split(RegExp(r'[_.\-]')).first.toLowerCase();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<Map<String, dynamic>?> _httpGetJson(Uri uri) async {
+    HttpClient? client;
+    try {
+      client = HttpClient();
+      final resp = await (await client.getUrl(uri)).close();
+      if (resp.statusCode != 200) {
+        await resp.drain<void>();
+        return null;
+      }
+      final text = await resp.transform(utf8.decoder).join();
+      final decoded = jsonDecode(text);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    } finally {
+      client?.close();
+    }
+  }
+
+  Future<Map<String, dynamic>?> _httpPostJson(
+      Uri uri, Map<String, dynamic> body) async {
+    HttpClient? client;
+    try {
+      client = HttpClient();
+      final req = await client.postUrl(uri);
+      req.headers.contentType = ContentType.json;
+      req.add(utf8.encode(jsonEncode(body)));
+      final resp = await req.close();
+      if (resp.statusCode != 200) {
+        await resp.drain<void>(); // 204 = no-fill, or an error
+        return null;
+      }
+      final text = await resp.transform(utf8.decoder).join();
+      final decoded = jsonDecode(text);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    } finally {
+      client?.close();
+    }
+  }
+
+  Future<void> _fireBeacon(String url) async {
+    HttpClient? client;
+    try {
+      client = HttpClient();
+      final resp = await (await client.getUrl(Uri.parse(url))).close();
+      await resp.drain<void>();
+    } catch (_) {
+      /* best-effort */
+    } finally {
+      client?.close();
+    }
+  }
+
   void _swallow(Object e, StackTrace s) {
     // SDK failures must never crash the host app (docs/sdk.md §5).
     if (kDebugMode) {
@@ -829,8 +1229,144 @@ class MTNativeAd extends StatelessWidget {
           onPlatformViewCreated: _onPlatformViewCreated,
         );
       default:
-        // Unsupported platform — render a benign empty box.
-        return const SizedBox.shrink();
+        // Desktop (Windows/macOS/Linux) and other non-mobile targets have no
+        // native ad view — render + track the ad in pure Dart. A click lands on
+        // the house campaign's web URL (via clickd).
+        return _Ja0DartNativeAd(
+          slotId: slotId,
+          onAdClicked: onAdClicked,
+          onAdImpression: onAdImpression,
+        );
     }
+  }
+}
+
+/// Pure-Dart native-ad renderer for desktop (Windows/macOS/Linux), where there is
+/// no native ad view. Fetches the ad via [Ja0Tracker.instance.ads], renders a
+/// simple card, fires impression beacons on display, and opens the (web) landing
+/// through clickd on tap.
+class _Ja0DartNativeAd extends StatefulWidget {
+  const _Ja0DartNativeAd({
+    required this.slotId,
+    this.onAdClicked,
+    this.onAdImpression,
+  });
+
+  final String slotId;
+  final void Function(String adId)? onAdClicked;
+  final void Function(String adId)? onAdImpression;
+
+  @override
+  State<_Ja0DartNativeAd> createState() => _Ja0DartNativeAdState();
+}
+
+class _Ja0DartNativeAdState extends State<_Ja0DartNativeAd> {
+  NativeAd? _ad;
+  bool _impressionSent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final ad = await Ja0Tracker.instance.ads.load(widget.slotId);
+    if (!mounted) return;
+    setState(() => _ad = ad);
+    if (ad != null && !_impressionSent) {
+      _impressionSent = true;
+      Ja0Tracker.instance._fireImpressions(ad);
+      widget.onAdImpression?.call(ad.adId);
+    }
+  }
+
+  void _onTap() {
+    final ad = _ad;
+    if (ad == null) return;
+    if (ad.clickUrl.isNotEmpty) Ja0Tracker.instance._openUrl(ad.clickUrl);
+    widget.onAdClicked?.call(ad.adId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = _ad;
+    if (ad == null) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: _onTap,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (ad.media != null && ad.media!.type == NativeAdMediaType.image)
+              Image.network(
+                ad.media!.url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  if (ad.iconUrl != null && ad.iconUrl!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        ad.iconUrl!,
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const SizedBox(width: 44, height: 44),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (ad.headline != null && ad.headline!.isNotEmpty)
+                          Text(ad.headline!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w600)),
+                        if (ad.body != null && ad.body!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(ad.body!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall),
+                          ),
+                        if (ad.advertiser != null && ad.advertiser!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(ad.advertiser!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall
+                                    ?.copyWith(color: theme.hintColor)),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (ad.cta != null && ad.cta!.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    FilledButton(onPressed: _onTap, child: Text(ad.cta!)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
