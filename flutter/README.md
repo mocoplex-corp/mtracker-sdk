@@ -68,6 +68,37 @@ const MTNativeAd(slotId: 'home_feed_slot');
 
 See `example/lib/main.dart` for a runnable-shaped minimal app.
 
+## Desktop (Windows / macOS / Linux)
+
+There is **no native core** on desktop, so the SDK runs these features in **pure Dart**:
+
+- **House ads** — `MTNativeAd(slotId: ...)` fetches the ad from the adserver over HTTP and
+  renders it with a Dart widget. A tap opens the campaign's **web landing** via clickd
+  (set *웹 랜딩 URL* on the house campaign in the console). Impressions/clicks are tracked.
+- **App update prompt** — polled from App Ops on init; the SDK draws the update dialog and
+  its CTA opens the download page. Desktop has no app store, so configure an **update
+  message** in the console whose **CTA URL** is your Windows/macOS download link.
+- **Review request** — a `review`-type App Ops message draws a Dart dialog whose CTA opens
+  your review page (`cta_url`).
+
+Two things to wire up in the host app:
+
+```dart
+// 1. Attach the SDK navigator key so it can draw its own dialogs (no host UI code).
+MaterialApp(navigatorKey: Ja0Tracker.navigatorKey, ...);
+
+// 2. Initialize as usual. appVersion is auto-read (package_info_plus); override if needed.
+await Ja0Tracker.instance.initialize(const Ja0TrackerConfig(
+  sdkKey: 'APP_SDK_KEY', sdkSecret: 'APP_SDK_SECRET', appId: 'APP_UUID',
+  // appVersion: '1.2.0',          // optional override
+  // enableDesktopAppOps: true,    // default; set false to draw update/review yourself
+));
+```
+
+If `navigatorKey` is not attached, the update/review prompts fall back to the
+`onUpdateAvailable` / `onMessage` callbacks so the host can draw them. Web (Flutter web)
+is not supported (the SDK uses `dart:io`).
+
 ## Architecture
 
 - `lib/mtracker.dart` — public Dart facade + types + `MTNativeAd` PlatformView widget.
