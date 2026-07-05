@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ================================================================================
+  ja0 SDK — REQUIRED iOS privacy declarations for a consuming app
+  (io.ja0tracker / Ja0TrackerSDK).  This file contains ONLY the part ja0 forces
+  you to declare. It is NOT a full app manifest.
+  ================================================================================
+
+  HOW TO USE
+  1. Merge the keys below into your app's  ios/Runner/PrivacyInfo.xcprivacy
+     (add that file to the Runner target in Xcode; check "Runner" on add).
+  2. Then ADD your app's OWN declarations (NOT included here — you decide these):
+       • NSPrivacyCollectedDataTypes → data YOUR app collects itself
+         (photos, location, email/account, purchases, contacts, …)
+       • NSPrivacyAccessedAPITypes  → required-reason APIs YOUR Runner code uses
+         (only the ones you actually use; wrong/missing entries = rejection)
+  3. Mirror the ja0 data types below in App Store Connect ▸ App Privacy label
+     (Device ID / Advertising Data / Diagnostics = "Used to Track You").
+
+  NOTES
+  • ja0's SDK ships its OWN PrivacyInfo.xcprivacy inside the pod, and Apple
+    AGGREGATES it with your app manifest. Its required-reason API (UserDefaults,
+    reason CA92.1) is already declared there — do NOT re-add it.
+  • Listing the ja0 data types in YOUR app manifest too is harmless (over-declare
+    is fine); the field that MUST be accurate app-wide is the ASC privacy label.
+  • Info.plist (separate from this file) also needs:
+      - NSUserTrackingUsageDescription  (ATT prompt copy)
+      - SKAdNetworkItems  ← add ja0's SKAdNetworkIdentifier once ja0 issues it.
+  Apple refs:
+    https://developer.apple.com/documentation/bundleresources/privacy-manifest-files
+    https://developer.apple.com/support/third-party-SDK-requirements/
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+    <!-- ja0 performs cross-app tracking (attribution / ads) after ATT is granted,
+         so the app-wide tracking flag must be true. -->
+    <key>NSPrivacyTracking</key>
+    <true/>
+
+    <!-- Keep EMPTY. Do NOT add ja0 hosts (ingest-/go-/ad-/api-mtracker.ja0.com):
+         a listed domain is blocked until ATT is granted, which would also block
+         ja0's ATT-independent aggregate analytics (install/session/events). ja0
+         attaches tracking-only identifiers (IDFA / match_token / fingerprint) in
+         code ONLY after ATT authorization — the correct enforcement point. -->
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <!-- Data the ja0 SDK collects. These are FIXED by ja0 (same for every app that
+         uses it) — keep as-is, and reflect them in the App Store Connect label.
+         (Your app's OWN collected data goes in this same array — add it yourself.) -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+
+        <!-- Device ID (IDFA / IDFV / match token) — attribution. ATT-gated at runtime. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeDeviceID</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+            </array>
+        </dict>
+
+        <!-- Product Interaction — sessions + in-app events (retention / funnel). -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeProductInteraction</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+
+        <!-- Advertising Data — native ad requests, impressions, clicks. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeAdvertisingData</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+            </array>
+        </dict>
+
+        <!-- Device diagnostics (model / OS / screen) — probabilistic fingerprint. ATT-gated. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeOtherDiagnosticData</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+
+        <!-- 👉 ADD YOUR APP'S OWN collected data types here. -->
+
+    </array>
+
+    <!-- 👉 ADD YOUR APP'S OWN required-reason APIs here, e.g.:
+         <key>NSPrivacyAccessedAPITypes</key>
+         <array>
+           <dict>
+             <key>NSPrivacyAccessedAPIType</key>
+             <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+             <key>NSPrivacyAccessedAPITypeReasons</key>
+             <array><string>CA92.1</string></array>
+           </dict>
+         </array>
+         ja0's own required-reason APIs are already in ja0's pod manifest — do not duplicate. -->
+
+</dict>
+</plist>

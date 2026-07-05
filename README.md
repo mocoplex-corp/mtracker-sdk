@@ -115,8 +115,11 @@ import Ja0TrackerSDK
 Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_...", appId: "YOUR_APP_ID"))
 ```
 
-- **iOS 15+.** `NSUserTrackingUsageDescription`(ATT 문구)와 `SKAdNetworkItems` 를 호스트 앱
-  `Info.plist` 에 추가해야 합니다. 개인정보 매니페스트(`PrivacyInfo.xcprivacy`)는 패키지에 동봉됩니다.
+- **iOS 15+.** `NSUserTrackingUsageDescription`(ATT 문구)와 `SKAdNetworkItems`(ja0 SKAdNetwork ID
+  발급 후) 를 호스트 앱 `Info.plist` 에 추가해야 합니다. SDK 자체 개인정보 매니페스트는 패키지에 동봉됩니다.
+- **앱 자체 `PrivacyInfo.xcprivacy`**: ja0가 요구하는 필수 선언은 [`ios/app-PrivacyInfo.reference.xcprivacy`](ios/app-PrivacyInfo.reference.xcprivacy)
+  를 참조하세요 — 앱 `Runner/PrivacyInfo.xcprivacy` 에 병합한 뒤 **앱 자체 수집 데이터·required-reason API** 를
+  얹고, App Store Connect 개인정보 라벨도 여기에 맞추면 됩니다.
 - RN/Flutter 의 iOS 네이티브도 이 Core 에 의존합니다.
 
 ---
