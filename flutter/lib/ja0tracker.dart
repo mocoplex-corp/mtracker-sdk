@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'src/messages.g.dart';
 
@@ -709,17 +710,23 @@ class Ja0Tracker {
         for (final m in msgs) {
           if (m is! Map) continue;
           final type = m['type'] as String?;
+          final id = (m['id'] as String?) ?? '';
+          final frequency = (m['frequency'] as String?) ?? 'always';
+          final minSessionSec = (m['min_session_sec'] as num?)?.toInt() ?? 0;
+          // Client-side gating (the native cores do this on mobile): respect the
+          // frequency (once/daily/session — persisted) and delay by min_session_sec
+          // so the prompt shows after N seconds of use, not instantly on launch.
           if (type == 'review') {
-            await _showDesktopReviewDialog(
-              title: m['title'] as String?,
-              body: m['body'] as String?,
-              ctaText: m['cta_text'] as String?,
-              ctaUrl: m['cta_url'] as String?,
-            );
+            unawaited(_gateThenShow(id, frequency, minSessionSec, () => _showDesktopReviewDialog(
+                  title: m['title'] as String?,
+                  body: m['body'] as String?,
+                  ctaText: m['cta_text'] as String?,
+                  ctaUrl: m['cta_url'] as String?,
+                )));
           } else {
             // announcement / custom: hand to the host's onMessage handler.
             final model = AppMessage(
-              id: (m['id'] as String?) ?? '',
+              id: id,
               type: _parseMessageType(type ?? 'announcement'),
               priority: (m['priority'] as num?)?.toInt() ?? 0,
               title: m['title'] as String?,
@@ -728,15 +735,17 @@ class Ja0Tracker {
               ctaUrl: m['cta_url'] as String?,
               imageUrl: m['image_url'] as String?,
               force: m['force'] == true,
-              minSessionSec: (m['min_session_sec'] as num?)?.toInt() ?? 0,
-              frequency: _parseFrequency((m['frequency'] as String?) ?? 'always'),
+              minSessionSec: minSessionSec,
+              frequency: _parseFrequency(frequency),
             );
-            final cb = _messageCallback;
-            if (cb != null) {
-              cb(model);
-            } else {
-              _pendingMessages.add(model);
-            }
+            unawaited(_gateThenShow(id, frequency, minSessionSec, () async {
+              final cb = _messageCallback;
+              if (cb != null) {
+                cb(model);
+              } else {
+                _pendingMessages.add(model);
+              }
+            }));
           }
         }
       }
@@ -1002,6 +1011,75 @@ class Ja0Tracker {
     } finally {
       client?.close();
     }
+  }
+
+  // ---- desktop App Ops gating (frequency + min_session_sec) ----
+  // The native mobile cores gate prompts by frequency / minimum session time;
+  // on desktop the Dart path must do it so a prompt isn't shown every launch.
+
+  final Set<String> _sessionShown = <String>{};
+
+  /// Runs [show] once the message passes its frequency + min-session gate, then
+  /// records it as shown. min_session_sec delays the prompt so it appears after
+  /// N seconds of use rather than instantly on launch.
+  Future<void> _gateThenShow(
+      String id, String frequency, int minSessionSec, Future<void> Function() show) async {
+    try {
+      if (id.isEmpty) return;
+      if (!await _shouldShow(id, frequency)) return;
+      if (minSessionSec > 0) {
+        await Future<void>.delayed(Duration(seconds: minSessionSec));
+      }
+      await show();
+      await _markShown(id, frequency);
+    } catch (e) {
+      debugPrint('[ja0] desktop gate/show skipped: $e');
+    }
+  }
+
+  Future<SharedPreferences?> _prefsOrNull() async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _shouldShow(String id, String frequency) async {
+    switch (frequency) {
+      case 'always':
+        return true;
+      case 'session':
+        return !_sessionShown.contains(id);
+      case 'daily':
+        final p = await _prefsOrNull();
+        return p?.getString('ja0_shown_day_$id') != _todayKey();
+      case 'once':
+      default:
+        final p = await _prefsOrNull();
+        return !(p?.getBool('ja0_shown_once_$id') ?? false);
+    }
+  }
+
+  Future<void> _markShown(String id, String frequency) async {
+    switch (frequency) {
+      case 'always':
+        break;
+      case 'session':
+        _sessionShown.add(id);
+        break;
+      case 'daily':
+        (await _prefsOrNull())?.setString('ja0_shown_day_$id', _todayKey());
+        break;
+      case 'once':
+      default:
+        (await _prefsOrNull())?.setBool('ja0_shown_once_$id', true);
+    }
+  }
+
+  String _todayKey() {
+    final n = DateTime.now();
+    return '${n.year}-${n.month}-${n.day}';
   }
 
   void _swallow(Object e, StackTrace s) {

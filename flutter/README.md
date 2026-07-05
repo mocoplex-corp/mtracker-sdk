@@ -81,6 +81,10 @@ There is **no native core** on desktop, so the SDK runs these features in **pure
 - **Review request** — a `review`-type App Ops message draws a Dart dialog whose CTA opens
   your review page (`cta_url`).
 
+Prompts respect their `frequency` (`once`/`daily`/`session` — persisted via
+`shared_preferences`) and `min_session_sec` (shown after N seconds of use, not instantly),
+matching the native mobile behavior.
+
 Two things to wire up in the host app:
 
 ```dart
