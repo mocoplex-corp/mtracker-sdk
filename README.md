@@ -122,6 +122,9 @@ Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_.
   얹고, App Store Connect 개인정보 라벨도 여기에 맞추면 됩니다.
 - RN/Flutter 의 iOS 네이티브도 이 Core 에 의존합니다.
 
+AdAttributionKit 광고 네트워크 등록 후 서버 구현, 키 관리, Apple JWS 검증 및
+운영 배포 절차는 [`docs/adattributionkit-server-follow-up-guide.ko.md`](docs/adattributionkit-server-follow-up-guide.ko.md)를 참고하세요.
+
 ---
 
 ## 좌표 요약 (v1.0.3)
