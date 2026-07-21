@@ -5,7 +5,7 @@
 // Package.swift 는 iOS SDK 소스(ios/Sources/MTracker)만 노출하며, 다른 플랫폼
 // 디렉토리(maven/·react-native/·flutter/)는 SPM 대상이 아니다.
 //
-//   .package(url: "https://github.com/mocoplex-corp/mtracker-sdk.git", from: "1.0.1")
+//   .package(url: "https://github.com/mocoplex-corp/mtracker-sdk.git", from: "1.0.7")
 //
 // Apple 프레임워크만 사용(CryptoKit/StoreKit/AdAttributionKit/AppTrackingTransparency/
 // UIKit/Security) — 서드파티 의존성 없음. macOS + Xcode(iOS 툴체인)에서 빌드된다.
