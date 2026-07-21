@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(AdAttributionKit)
+import AdAttributionKit
+#endif
 #if canImport(UIKit)
 import UIKit
 
@@ -15,6 +18,14 @@ public final class MTNativeAdView: UIView {
     private var ad: NativeAd?
     private var impressionFired = false
 
+    // Kept as Any so the SDK can retain an AppImpression while preserving its
+    // iOS 15 deployment target; every cast/use is guarded by iOS 17.4 runtime
+    // availability. View operations are serialized through a task chain.
+    private var aakImpression: Any?
+    private var aakViewActive = false
+    private var aakTapInFlight = false
+    private var aakViewTask: Task<Void, Never>?
+
     /// Fired once when the viewability-gated impression beacon fires (main thread).
     public var onImpression: (() -> Void)?
 
@@ -24,6 +35,7 @@ public final class MTNativeAdView: UIView {
     /// Viewability tracking: the ad must be ≥ `pixels` fraction on-screen continuously
     /// for `ms` before the impression counts (docs/ads.md §4, §6).
     private var viewabilityTimer: Timer?
+    private var visibilityMonitor: Timer?
     private var visibleSince: Date?
 
     private let beaconSession: URLSession = {
@@ -40,6 +52,7 @@ public final class MTNativeAdView: UIView {
     private let mediaView = UIImageView()
     private let ctaButton = UIButton(type: .system)
     private let stack = UIStackView()
+    private let eventAttributionView = UIEventAttributionView()
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -53,6 +66,7 @@ public final class MTNativeAdView: UIView {
 
     deinit {
         viewabilityTimer?.invalidate()
+        visibilityMonitor?.invalidate()
     }
 
     // MARK: - Binding
@@ -60,9 +74,12 @@ public final class MTNativeAdView: UIView {
     /// Binds an ad and populates the template. Loads remote icon/media asynchronously.
     /// Resets impression state so a reused view (cell recycling) re-qualifies.
     public func bind(_ ad: NativeAd) {
+        endAAKViewIfNeeded()
         self.ad = ad
         self.impressionFired = false
         self.visibleSince = nil
+        self.aakImpression = nil
+        self.aakTapInFlight = false
 
         headlineLabel.text = ad.assets.headline
         bodyLabel.text = ad.assets.body
@@ -78,6 +95,7 @@ public final class MTNativeAdView: UIView {
         if let media = ad.assets.media, media.type == .image, let url = URL(string: media.url) {
             loadImage(url, into: mediaView)
         }
+        configureAAKImpression(for: ad)
         // Kick off viewability evaluation.
         evaluateViewability()
     }
@@ -124,6 +142,18 @@ public final class MTNativeAdView: UIView {
         [iconView, headlineLabel, advertiserLabel, bodyLabel, mediaView, ctaButton]
             .forEach { stack.addArrangedSubview($0) }
 
+        // AdAttributionKit requires the user interaction to pass through a
+        // UIEventAttributionView before handleTap(). The overlay doesn't consume
+        // touches, so the button/card handlers below continue to receive them.
+        eventAttributionView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(eventAttributionView)
+        NSLayoutConstraint.activate([
+            eventAttributionView.topAnchor.constraint(equalTo: topAnchor),
+            eventAttributionView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            eventAttributionView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            eventAttributionView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+
         // Whole-card tap also routes the click (native ads are tappable everywhere).
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         addGestureRecognizer(tap)
@@ -134,6 +164,12 @@ public final class MTNativeAdView: UIView {
 
     public override func didMoveToWindow() {
         super.didMoveToWindow()
+        if window == nil {
+            visibilityMonitor?.invalidate()
+            visibilityMonitor = nil
+        } else {
+            startVisibilityMonitorIfNeeded()
+        }
         evaluateViewability()
     }
 
@@ -146,10 +182,20 @@ public final class MTNativeAdView: UIView {
     /// timer that fires the impression once the threshold has been met continuously for
     /// the required duration.
     private func evaluateViewability() {
-        guard let ad, !impressionFired else { return }
+        guard let ad else {
+            endAAKViewIfNeeded()
+            return
+        }
         let visibleFraction = onScreenFraction()
         let meets = visibleFraction >= ad.tracking.viewableThreshold.pixels
 
+        if meets {
+            beginAAKViewIfNeeded()
+        } else {
+            endAAKViewIfNeeded()
+        }
+
+        guard !impressionFired else { return }
         if meets {
             if visibleSince == nil { visibleSince = Date() }
             if viewabilityTimer == nil {
@@ -184,13 +230,33 @@ public final class MTNativeAdView: UIView {
         onImpression?()
     }
 
+    /// Scrolling doesn't necessarily trigger layoutSubviews on a reused native
+    /// ad view. Poll while attached so both the custom beacon timer and Apple's
+    /// beginView/endView lifecycle observe ancestor clipping accurately.
+    private func startVisibilityMonitorIfNeeded() {
+        guard visibilityMonitor == nil, window != nil else { return }
+        let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
+            self?.evaluateViewability()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        visibilityMonitor = timer
+    }
+
     /// Fraction of this view's area currently visible within its window.
     private func onScreenFraction() -> Double {
         guard let window = window, !isHidden, alpha > 0.01, bounds.area > 0 else { return 0 }
         let inWindow = convert(bounds, to: window)
-        let intersection = inWindow.intersection(window.bounds)
-        guard !intersection.isNull else { return 0 }
-        return Double(intersection.area / inWindow.area)
+        var visibleRect = inWindow.intersection(window.bounds)
+        var ancestor = superview
+        while let view = ancestor, view !== window {
+            if view.clipsToBounds {
+                visibleRect = visibleRect.intersection(view.convert(view.bounds, to: window))
+            }
+            if visibleRect.isNull || visibleRect.isEmpty { return 0 }
+            ancestor = view.superview
+        }
+        guard !visibleRect.isNull else { return 0 }
+        return Double(visibleRect.area / inWindow.area)
     }
 
     // MARK: - Click
@@ -201,9 +267,92 @@ public final class MTNativeAdView: UIView {
         // GET the click beacon (clickd 302-redirects; joins attribution pipeline).
         guard let url = URL(string: ad.tracking.clickURL) else { return }
         fireBeacon(ad.tracking.clickURL, method: "GET")
+
+        #if canImport(AdAttributionKit)
+        if #available(iOS 17.4, *),
+           let impression = aakImpression as? AppImpression,
+           !aakTapInFlight {
+            aakTapInFlight = true
+            Task { [weak self] in
+                do {
+                    // AdAttributionKit records the click and opens the installed
+                    // app or preferred marketplace using the signed item id.
+                    try await impression.handleTap()
+                } catch {
+                    // Preserve legacy click routing if the system rejects the
+                    // impression or the current device doesn't support it.
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
+                self?.aakTapInFlight = false
+            }
+            return
+        }
+        #endif
+
         // Open the click URL in the browser; clickd resolves the final destination
         // (store page / universal link) via its 302 redirect.
         UIApplication.shared.open(url, options: [:], completionHandler: nil)
+    }
+
+    // MARK: - AdAttributionKit
+
+    private func configureAAKImpression(for ad: NativeAd) {
+        #if canImport(AdAttributionKit)
+        guard #available(iOS 17.4, *),
+              AppImpression.isSupported,
+              let attribution = ad.attribution,
+              attribution.provider.lowercased() == "adattributionkit" else { return }
+
+        let adID = ad.adId
+        Task { [weak self] in
+            do {
+                let impression = try await AppImpression(compactJWS: attribution.compactJWS)
+                guard let self, self.ad?.adId == adID else { return }
+                self.aakImpression = impression
+                self.evaluateViewability()
+            } catch {
+                // Invalid/expired JWS must never break host rendering. The
+                // existing click/impression beacons remain as the fallback.
+            }
+        }
+        #endif
+    }
+
+    private func beginAAKViewIfNeeded() {
+        #if canImport(AdAttributionKit)
+        guard #available(iOS 17.4, *),
+              let impression = aakImpression as? AppImpression,
+              !aakViewActive else { return }
+
+        aakViewActive = true
+        let previous = aakViewTask
+        aakViewTask = Task { [weak self] in
+            _ = await previous?.result
+            do {
+                try await impression.beginView()
+            } catch {
+                if let current = self?.aakImpression as? AppImpression,
+                   current == impression {
+                    self?.aakViewActive = false
+                }
+            }
+        }
+        #endif
+    }
+
+    private func endAAKViewIfNeeded() {
+        #if canImport(AdAttributionKit)
+        guard #available(iOS 17.4, *),
+              let impression = aakImpression as? AppImpression,
+              aakViewActive else { return }
+
+        aakViewActive = false
+        let previous = aakViewTask
+        aakViewTask = Task {
+            _ = await previous?.result
+            try? await impression.endView()
+        }
+        #endif
     }
 
     // MARK: - Beacons

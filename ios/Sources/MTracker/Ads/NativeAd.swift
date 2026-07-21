@@ -59,6 +59,19 @@ public struct NativeAdTracking: Sendable {
     }
 }
 
+/// Optional privacy-preserving attribution data supplied by the ad server for
+/// an eligible iOS impression. The compact JWS is signed by mtracker and is
+/// consumed by AdAttributionKit; host apps must treat it as opaque.
+public struct NativeAdAttribution: Sendable {
+    public let provider: String
+    public let compactJWS: String
+
+    public init(provider: String, compactJWS: String) {
+        self.provider = provider
+        self.compactJWS = compactJWS
+    }
+}
+
 /// A loaded native ad returned by `MTAds.load`. Rendered via `MTNativeAdView` or a
 /// fully-custom app view that reads `assets` directly (docs/ads.md §6).
 public struct NativeAd: Sendable {
@@ -67,15 +80,18 @@ public struct NativeAd: Sendable {
     public let format: String      // "native" | "banner" | "native-video"
     public let assets: NativeAdAssets
     public let tracking: NativeAdTracking
+    public let attribution: NativeAdAttribution?
 
     public init(
         slotId: String, adId: String, format: String,
-        assets: NativeAdAssets, tracking: NativeAdTracking
+        assets: NativeAdAssets, tracking: NativeAdTracking,
+        attribution: NativeAdAttribution? = nil
     ) {
         self.slotId = slotId
         self.adId = adId
         self.format = format
         self.assets = assets
         self.tracking = tracking
+        self.attribution = attribution
     }
 }

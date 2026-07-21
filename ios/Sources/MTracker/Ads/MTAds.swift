@@ -105,9 +105,18 @@ public final class MTAds {
             viewableThreshold: threshold
         )
 
+        var attribution: NativeAdAttribution?
+        if let attr = obj["attribution"] as? [String: Any],
+           let provider = attr["provider"] as? String,
+           provider.lowercased() == "adattributionkit",
+           let compactJWS = attr["compactJWS"] as? String,
+           !compactJWS.isEmpty {
+            attribution = NativeAdAttribution(provider: provider, compactJWS: compactJWS)
+        }
+
         return NativeAd(
             slotId: slotId, adId: adId, format: format,
-            assets: assets, tracking: tracking
+            assets: assets, tracking: tracking, attribution: attribution
         )
     }
 }

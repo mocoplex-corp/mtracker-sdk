@@ -117,6 +117,8 @@ Ja0Tracker.shared.initialize(Ja0TrackerConfig(sdkKey: "pk_...", sdkSecret: "sk_.
 
 - **iOS 15+.** `NSUserTrackingUsageDescription`(ATT 문구)와 `SKAdNetworkItems`(ja0 SKAdNetwork ID
   발급 후) 를 호스트 앱 `Info.plist` 에 추가해야 합니다. SDK 자체 개인정보 매니페스트는 패키지에 동봉됩니다.
+- **AdAttributionKit 광고를 표시하는 앱**은 `Info.plist`의 `AdNetworkIdentifiers` 배열에
+  `j6h985gljy.adattributionkit`을 소문자로 추가해야 signed impression이 postback 대상이 됩니다.
 - **앱 자체 `PrivacyInfo.xcprivacy`**: ja0가 요구하는 필수 선언은 [`ios/app-PrivacyInfo.reference.xcprivacy`](ios/app-PrivacyInfo.reference.xcprivacy)
   를 참조하세요 — 앱 `Runner/PrivacyInfo.xcprivacy` 에 병합한 뒤 **앱 자체 수집 데이터·required-reason API** 를
   얹고, App Store Connect 개인정보 라벨도 여기에 맞추면 됩니다.

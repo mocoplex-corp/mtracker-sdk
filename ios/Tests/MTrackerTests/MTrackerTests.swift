@@ -162,6 +162,10 @@ final class MTrackerTests: XCTestCase {
             "impression": ["https://ingest-mtracker.ja0.com/i/abc"],
             "click": "https://go-mtracker.ja0.com/ad/xyz",
             "viewableThreshold": { "pixels": 0.5, "ms": 1000 }
+          },
+          "attribution": {
+            "provider": "adattributionkit",
+            "compactJWS": "header.payload.signature"
           }
         }
         """.data(using: .utf8)!
@@ -174,5 +178,7 @@ final class MTrackerTests: XCTestCase {
         XCTAssertEqual(ad?.tracking.clickURL, "https://go-mtracker.ja0.com/ad/xyz")
         XCTAssertEqual(ad?.tracking.impressionURLs.first, "https://ingest-mtracker.ja0.com/i/abc")
         XCTAssertEqual(ad?.tracking.viewableThreshold.pixels, 0.5)
+        XCTAssertEqual(ad?.attribution?.provider, "adattributionkit")
+        XCTAssertEqual(ad?.attribution?.compactJWS, "header.payload.signature")
     }
 }

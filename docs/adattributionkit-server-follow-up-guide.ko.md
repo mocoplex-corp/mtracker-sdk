@@ -3,10 +3,10 @@
 > 대상: mtracker 백엔드·인프라·보안·iOS SDK 담당자
 > Apple Case-ID: `20861928`
 > Ad network ID: `j6h985gljy.adattributionkit`
-> 최종 확인일: 2026-07-21
-> 상태: Apple 등록 정보 회신 전
+> 최종 확인일: 2026-07-22
+> 상태: Apple enrollment 완료, 운영 연동 활성화 단계
 
-이 문서는 Apple의 AdAttributionKit Enrollment 팀에 공개 키와 포스트백 URL을 회신하기 전에 서버에서 완료해야 할 작업과, 승인 후 광고 노출부터 포스트백 집계까지 연결하기 위한 구현 계약을 정의한다.
+Apple은 2026-07-22 `Case-ID: 20861928`에 대해 공개 키와 포스트백 URL을 승인하고 “Your application is now complete”라고 회신했다. 이 문서는 완료된 enrollment 설정과 광고 노출부터 포스트백 집계까지 연결하는 운영 구현 계약을 정의한다.
 
 ## 1. 완료 조건
 
@@ -31,7 +31,7 @@
 https://ingest-mtracker.ja0.com/v1/adattributionkit/postbacks
 ```
 
-이 URL은 목표 계약이다. 2026-07-21의 HEAD 점검에서는 `404 Not Found`였으므로, 라우트를 실제 배포하고 POST 테스트를 통과하기 전에는 Apple에 제출하지 않는다. 다른 URL을 선택한다면 이 문서의 모든 예시와 운영 설정을 동일한 최종 URL로 변경한다.
+이 URL은 Apple에 등록된 운영 계약이다. 2026-07-22 점검에서 POST 전용 라우트(`HEAD` 요청은 `405 Method Not Allowed`, `Allow: POST`)와 TLS가 정상임을 확인했다. URL을 변경하려면 서버를 먼저 배포·검증한 뒤 Apple Enrollment 팀과 등록 변경을 진행한다.
 
 ## 2. 전체 처리 흐름
 
@@ -594,6 +594,8 @@ curl -i \
 로그에는 request ID, 수신 시각, body hash, `kid`, environment, verification status, rejection reason만 기본 기록한다. compact JWS와 전체 payload는 접근 통제된 저장소에서만 조회한다.
 
 ## 12. 배포 순서
+
+현재 1~6단계와 Apple enrollment가 완료됐다. 승인 후 활성화 작업인 7~10단계를 진행한다.
 
 1. DB migration과 queue topic을 먼저 배포한다.
 2. worker를 비집계 shadow mode로 배포한다.
