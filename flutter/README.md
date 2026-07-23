@@ -66,6 +66,14 @@ final ad = await Ja0Tracker.instance.ads.load('home_feed_slot');   // imperative
 const MTNativeAd(slotId: 'home_feed_slot');
 ```
 
+On Android, granting attribution or ads consent enables collection of the
+resettable Google Advertising ID (AAID). The plugin omits deleted, zeroed, or
+limited identifiers, adds an `adid` field to subsequent event parameters and
+native-ad request context, and emits one `adid_sync` event so the identifier can
+be associated with the SDK install ID. Apps targeting Android 13+ must declare
+Advertising ID use in Google Play Console; the plugin manifest supplies the
+required `com.google.android.gms.permission.AD_ID` permission.
+
 See `example/lib/main.dart` for a runnable-shaped minimal app.
 
 ## Desktop (Windows / macOS / Linux)

@@ -1,6 +1,7 @@
 package io.ja0tracker.flutter
 
 import android.content.Context
+import com.google.android.gms.ads.identifier.AdvertisingIdClient
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -17,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * mtracker Flutter plugin (Android).
@@ -33,6 +35,8 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
     private var flutterApi: Ja0TrackerFlutterApi? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var callbacksWired = false
+    @Volatile private var adIdConsentGranted = false
+    @Volatile private var advertisingInfo = AdvertisingInfo()
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         applicationContext = binding.applicationContext
@@ -53,6 +57,8 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
         Ja0TrackerHostApi.setUp(binding.binaryMessenger, null)
         flutterApi = null
         applicationContext = null
+        adIdConsentGranted = false
+        advertisingInfo = AdvertisingInfo()
     }
 
     // ---- Ja0TrackerHostApi (Dart -> native): delegate to the Core ----
@@ -88,6 +94,10 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
     }
 
     override fun setConsent(consent: ConsentMessage) {
+        adIdConsentGranted = consent.attribution || consent.ads
+        if (!adIdConsentGranted) {
+            advertisingInfo = AdvertisingInfo()
+        }
         Ja0Tracker.setConsent(
             Consent(
                 analytics = consent.analytics,
@@ -95,26 +105,80 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
                 ads = consent.ads,
             )
         )
+        if (adIdConsentGranted) {
+            scope.launch { refreshAdvertisingId(emitSyncEvent = true) }
+        }
     }
 
     override fun trackEvent(name: String, params: Map<String?, Any?>) {
         @Suppress("UNCHECKED_CAST")
-        Ja0Tracker.trackEvent(name, params.filterKeys { it != null } as Map<String, Any?>)
+        val cleanParams = params.filterKeys { it != null } as Map<String, Any?>
+        Ja0Tracker.trackEvent(name, cleanParams.withAdvertisingInfo())
     }
 
     override fun loadAd(slotId: String, callback: (Result<NativeAdMessage?>) -> Unit) {
         scope.launch {
             try {
+                val currentAdvertisingInfo = if (adIdConsentGranted) {
+                    refreshAdvertisingId(emitSyncEvent = false)
+                } else {
+                    AdvertisingInfo()
+                }
                 // Pass the device language so the adserver serves localized (house-ad)
-                // copy — the prebuilt core forwards context.lang to the request.
+                // copy. When consented and available, AAID is included for ad delivery
+                // and attribution; an opted-out/zeroed identifier is never transmitted.
                 val ad = Ja0Tracker.ads.load(
                     slotId,
-                    context = mapOf("lang" to java.util.Locale.getDefault().language),
+                    context = buildMap {
+                        put("lang", java.util.Locale.getDefault().language)
+                        putAll(currentAdvertisingInfo.toParams())
+                    },
                 )
                 callback(Result.success(ad?.toMessage()))
             } catch (t: Throwable) {
                 callback(Result.success(null)) // no-fill on error
             }
+        }
+    }
+
+    /**
+     * Reads the resettable Google Advertising ID on a worker thread. Google Play
+     * services can be absent or the user can delete/limit the identifier; all of
+     * those cases resolve to an empty snapshot instead of affecting the host app.
+     */
+    private suspend fun refreshAdvertisingId(emitSyncEvent: Boolean): AdvertisingInfo {
+        val context = applicationContext ?: return AdvertisingInfo()
+        val collected = withContext(Dispatchers.IO) {
+            try {
+                val info = AdvertisingIdClient.getAdvertisingIdInfo(context)
+                val rawId = info.id?.trim()
+                val unavailable = rawId.isNullOrEmpty() ||
+                    rawId == ZEROED_ADVERTISING_ID || info.isLimitAdTrackingEnabled
+                AdvertisingInfo(
+                    id = rawId?.takeUnless { unavailable },
+                    limitAdTracking = info.isLimitAdTrackingEnabled,
+                )
+            } catch (_: Throwable) {
+                AdvertisingInfo()
+            }
+        }
+
+        // Consent may have been revoked while Play services was resolving the ID.
+        if (!adIdConsentGranted) return AdvertisingInfo()
+        advertisingInfo = collected
+        if (emitSyncEvent && collected.id != null) {
+            Ja0Tracker.trackEvent(AD_ID_SYNC_EVENT, collected.toParams())
+        }
+        return collected
+    }
+
+    private fun Map<String, Any?>.withAdvertisingInfo(): Map<String, Any?> {
+        if (!adIdConsentGranted) return this
+        val adParams = advertisingInfo.toParams()
+        if (adParams.isEmpty()) return this
+        return LinkedHashMap<String, Any?>(this).apply {
+            // Host-provided values win so the bridge never silently overwrites them.
+            adParams.forEach { (key, value) -> putIfAbsent(key, value) }
         }
     }
 
@@ -167,6 +231,21 @@ class Ja0TrackerPlugin : FlutterPlugin, Ja0TrackerHostApi, ActivityAware {
         "warn" -> LogLevel.WARN
         "debug" -> LogLevel.DEBUG
         else -> LogLevel.INFO
+    }
+
+    private companion object {
+        const val AD_ID_SYNC_EVENT = "adid_sync"
+        const val ZEROED_ADVERTISING_ID = "00000000-0000-0000-0000-000000000000"
+    }
+}
+
+private data class AdvertisingInfo(
+    val id: String? = null,
+    val limitAdTracking: Boolean = false,
+) {
+    fun toParams(): Map<String, Any?> = buildMap {
+        id?.let { put("adid", it) }
+        if (limitAdTracking) put("limit_ad_tracking", true)
     }
 }
 

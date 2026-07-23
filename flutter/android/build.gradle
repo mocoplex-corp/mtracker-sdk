@@ -56,6 +56,10 @@ dependencies {
     // In the monorepo you may substitute this with `includeBuild("sdk/android")`.
     implementation 'io.ja0tracker:ja0tracker-android:1.0.3'
 
+    // Google Advertising ID (AAID). Collection is performed off the main
+    // thread and only after attribution/ads consent is granted by the host.
+    implementation 'com.google.android.gms:play-services-ads-identifier:18.3.0'
+
     // Coroutines: Ja0Tracker.ads.load(slotId) is a `suspend fun`; the plugin bridges it to
     // the async Pigeon callback.
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
